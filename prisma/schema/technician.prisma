@@ -1,0 +1,40 @@
+model TechnicianProfile {
+  id           String  @id @default(uuid())
+  userId       String  @unique
+  employeeCode String  @unique
+  baseCity     String
+  hourlyRate   Decimal @db.Decimal(10, 2)
+  maxDailyJobs Int     @default(3)
+  isAvailable  Boolean @default(true)
+  ratingAvg    Decimal @default(0) @db.Decimal(3, 2)
+  ratingCount  Int     @default(0)
+
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skills     TechnicianSkill[]
+  workOrders WorkOrder[]
+
+  @@index([baseCity, isAvailable])
+  @@map("technician_profiles")
+}
+
+model Skill {
+  id   String @id @default(uuid())
+  name String @unique 
+
+  technicians TechnicianSkill[]
+  categories  ServiceCategory[]
+
+  @@map("skills")
+}
+
+model TechnicianSkill {
+  technicianId String
+  skillId      String
+  level        Int    @default(1) 
+
+  technician TechnicianProfile @relation(fields: [technicianId], references: [id], onDelete: Cascade)
+  skill      Skill             @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([technicianId, skillId])
+  @@map("technician_skills")
+}

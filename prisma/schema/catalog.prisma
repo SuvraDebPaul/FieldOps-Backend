@@ -1,0 +1,17 @@
+model ServiceCategory {
+  id              String    @id @default(uuid())
+  name            String    @unique 
+  description     String?
+  requiredSkillId String
+  baseCharge      Decimal   @db.Decimal(10, 2)
+  estimatedMins   Int
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  requiredSkill Skill            @relation(fields: [requiredSkillId], references: [id])
+  requests      ServiceRequest[]
+
+  @@map("service_categories")
+}

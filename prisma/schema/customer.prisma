@@ -1,0 +1,33 @@
+model CustomerProfile {
+  id          String @id @default(uuid())
+  userId      String @unique
+  companyName String
+  billingAddr String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  sites    Site[]
+  requests ServiceRequest[]
+
+  @@map("customer_profiles")
+}
+
+model Site {
+  id           String @id @default(uuid())
+  customerId   String
+  label        String
+  address      String
+  city         String
+  contactName  String
+  contactPhone String
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  customer CustomerProfile  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  requests ServiceRequest[]
+
+  @@index([customerId])
+  @@map("sites")
+}

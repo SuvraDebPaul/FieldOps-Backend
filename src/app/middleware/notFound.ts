@@ -7,5 +7,6 @@ export const notFound = (req: Request, res: Response) => {
     statusCode: httpStatus.NOT_FOUND,
     message: "Route Not Found",
     path: req.originalUrl,
+    date: new Date(),
   });
 };

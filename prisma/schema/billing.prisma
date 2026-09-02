@@ -1,0 +1,38 @@
+model Invoice {
+  id           String        @id @default(uuid())
+  invoiceNo    String        @unique 
+  workOrderId  String        @unique
+  labourHours  Decimal       @db.Decimal(5, 2)
+  labourAmount Decimal       @db.Decimal(12, 2)
+  partsAmount  Decimal       @db.Decimal(12, 2)
+  vatAmount    Decimal       @db.Decimal(12, 2)
+  totalAmount  Decimal       @db.Decimal(12, 2)
+  status       InvoiceStatus @default(DUE)
+  dueDate      DateTime      @db.Timestamptz(3)
+  issuedAt     DateTime      @default(now())
+  paidAt       DateTime?
+  deletedAt    DateTime?
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id])
+  payments  Payment[]
+
+  @@index([status, dueDate])
+  @@map("invoices")
+}
+
+model Payment {
+  id             String        @id @default(uuid())
+  invoiceId      String
+  transactionId  String        @unique 
+  gatewayRef     String? 
+  amount         Decimal       @db.Decimal(12, 2)
+  status         PaymentStatus @default(INITIATED)
+  gatewayPayload Json?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@index([invoiceId, status])
+  @@map("payments")
+}

@@ -1,18 +1,38 @@
 model User {
-  id            String       @id @default(uuid())
-  email         String       @unique
-  password      String?                        // null for Google-only accounts
-  provider      AuthProvider @default(CREDENTIALS)
-  googleId      String?      @unique
-  name          String
-  phone         String?
-  role          Role         @default(CUSTOMER)
-  status        UserStatus   @default(ACTIVE)
-  avatarUrl     String?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  deletedAt     DateTime?
-  
+  id             String       @id @default(uuid())
+  email          String       @unique
+  password       String? 
+  provider       AuthProvider @default(CREDENTIALS)
+  googleId       String?      @unique
+  name           String
+  phone          String?
+  role           Role         @default(CUSTOMER)
+  status         UserStatus   @default(ACTIVE)
+  avatarUrl      String?
+  avatarPublicId String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
+
+  customer      CustomerProfile?
+  technician    TechnicianProfile?
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
+
   @@index([role, status])
   @@map("users")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
 }

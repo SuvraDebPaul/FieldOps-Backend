@@ -1,0 +1,70 @@
+model WorkOrder {
+  id             String          @id @default(uuid())
+  code           String          @unique 
+  requestId      String          @unique
+  technicianId   String
+  scheduledStart DateTime        @db.Timestamptz(3)
+  scheduledEnd   DateTime        @db.Timestamptz(3)
+  actualStart    DateTime?       @db.Timestamptz(3)
+  actualEnd      DateTime?       @db.Timestamptz(3)
+  status         WorkOrderStatus @default(ASSIGNED)
+  diagnosis      String?
+  workSummary    String?
+  reportUrl      String?
+  cancelReason   String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  deletedAt      DateTime?
+
+  request    ServiceRequest     @relation(fields: [requestId], references: [id])
+  technician TechnicianProfile  @relation(fields: [technicianId], references: [id])
+  parts      PartUsage[]
+  history    WorkOrderHistory[]
+  invoice    Invoice?
+  feedback   Feedback?
+
+  @@index([technicianId, scheduledStart])
+  @@index([status, scheduledStart])
+  @@map("work_orders")
+}
+
+model WorkOrderHistory {
+  id          String           @id @default(uuid())
+  workOrderId String
+  fromStatus  WorkOrderStatus?
+  toStatus    WorkOrderStatus
+  changedById String
+  note        String?
+  createdAt   DateTime         @default(now())
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@index([workOrderId, createdAt])
+  @@map("work_order_history")
+}
+
+model PartUsage {
+  id          String   @id @default(uuid())
+  workOrderId String
+  name        String
+  quantity    Int
+  unitPrice   Decimal  @db.Decimal(10, 2)
+  createdAt   DateTime @default(now())
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@index([workOrderId])
+  @@map("part_usages")
+}
+
+model Feedback {
+  id          String   @id @default(uuid())
+  workOrderId String   @unique
+  rating      Int 
+  comment     String?
+  createdAt   DateTime @default(now())
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id])
+
+  @@map("feedbacks")
+}
