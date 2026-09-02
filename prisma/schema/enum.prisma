@@ -1,0 +1,48 @@
+enum Role {
+     CUSTOMER 
+     TECHNICIAN 
+     ADMIN 
+}
+enum UserStatus { 
+    ACTIVE 
+    SUSPENDED 
+}
+enum AuthProvider { 
+    CREDENTIALS 
+    GOOGLE 
+}
+enum Priority { 
+    LOW 
+    NORMAL 
+    HIGH 
+    CRITICAL 
+}
+enum RequestStatus { 
+    PENDING 
+    APPROVED 
+    REJECTED 
+    CANCELLED 
+    CONVERTED 
+}
+enum WorkOrderStatus { 
+    ASSIGNED 
+    SCHEDULED 
+    EN_ROUTE 
+    IN_PROGRESS 
+    COMPLETED 
+    INVOICED 
+    PAID 
+    CANCELLED 
+}
+enum InvoiceStatus { 
+    DUE 
+    PAID 
+    CANCELLED 
+}
+enum PaymentStatus { 
+    INITIATED 
+    SUCCESS 
+    FAILED 
+    CANCELLED 
+}
+
