@@ -25,3 +25,8 @@ export interface IAuthTokens {
   accessToken: string;
   refreshToken: string;
 }
+
+export interface IChnagePassword {
+  oldPassword: string;
+  newPassword: string;
+}

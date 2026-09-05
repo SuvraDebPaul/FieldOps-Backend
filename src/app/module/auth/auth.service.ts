@@ -1,6 +1,11 @@
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
-import { IJwtPayload, ILoginPayload, IRegisterPayload } from "./auth.interface";
+import {
+  IChnagePassword,
+  IJwtPayload,
+  ILoginPayload,
+  IRegisterPayload,
+} from "./auth.interface";
 import httpStatus from "http-status";
 import bcrypt from "bcryptjs";
 import config from "../../config";
@@ -8,6 +13,7 @@ import { Role } from "../../../generated/prisma/enums";
 import crypto from "crypto";
 import { jwtUtils } from "../../utils/jwt";
 import jwt from "jsonwebtoken";
+import { RequestUser } from "../../middleware/checkAuth";
 
 const register = async (payload: IRegisterPayload) => {
   const { name, email, password, phone, companyName, billingAddr } = payload;
@@ -113,4 +119,105 @@ const login = async (payload: ILoginPayload) => {
   return { ...tokens, user: safeUser };
 };
 
-export const AuthService = { register, login };
+const refreshToken = async (token: string | undefined) => {
+  if (!token) {
+    throw new AppError(httpStatus.UNAUTHORIZED, "No refresh token provided");
+  }
+  const verified = jwtUtils.verifyToken(token, config.JWT_ACCESS_SECRET);
+
+  if (!verified.success) {
+    throw new AppError(
+      httpStatus.UNAUTHORIZED,
+      "Invalid or expired refresh token",
+    );
+  }
+  const stored = await prisma.refreshToken.findUnique({
+    where: { tokenHash: hashToken(token) },
+  });
+  if (!stored || stored.revokedAt || stored.expiresAt < new Date()) {
+    throw new AppError(
+      httpStatus.UNAUTHORIZED,
+      "Refresh token is no longer valid",
+    );
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: stored.userId },
+  });
+
+  if (!user || user.deletedAt || user.status === "SUSPENDED") {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Account is not active");
+  }
+
+  const tokens = await prisma.$transaction(async (tx) => {
+    await tx.refreshToken.update({
+      where: { id: stored.id },
+      data: { revokedAt: new Date() },
+    });
+
+    return issueTokens({
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    });
+  });
+
+  return tokens;
+};
+
+const logout = async (token: string | undefined) => {
+  if (!token) {
+    return;
+  }
+
+  await prisma.refreshToken.updateMany({
+    where: { tokenHash: hashToken(token), revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+};
+
+const changePassword = async (payload: IChnagePassword, user: RequestUser) => {
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.userId },
+  });
+
+  if (!dbUser) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
+  }
+
+  if (!dbUser.password) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "This account uses Google sign-in and has no password.",
+    );
+  }
+
+  const isCorrect = await bcrypt.compare(payload.oldPassword, dbUser.password);
+  if (!isCorrect) {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Old password is incorrect");
+  }
+  const hashed = await bcrypt.hash(
+    payload.newPassword,
+    config.BCRYPT_SALT_ROUNDS,
+  );
+
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: user.userId },
+      data: { password: hashed },
+    }),
+    prisma.refreshToken.updateMany({
+      where: { userId: user.userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    }),
+  ]);
+};
+
+export const AuthService = {
+  register,
+  login,
+  logout,
+  refreshToken,
+  changePassword,
+};
