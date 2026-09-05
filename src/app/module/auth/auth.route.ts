@@ -3,6 +3,7 @@ import { validateRequest } from "../../middleware/validateRequest";
 import { authLimiter } from "../../middleware/rateLimiter";
 import {
   ChangePasswordValidationZodSchema,
+  GoogleLoginValidationZodSchema,
   LoginValidationZodSchema,
   RegisterValidationZodSchema,
 } from "./auth.validation";
@@ -23,6 +24,13 @@ router.post(
   authLimiter,
   validateRequest(LoginValidationZodSchema),
   AuthController.login,
+);
+
+router.post(
+  "/google",
+  authLimiter,
+  validateRequest(GoogleLoginValidationZodSchema),
+  AuthController.googleLogin,
 );
 
 router.post("/refresh-token", AuthController.refreshToken);

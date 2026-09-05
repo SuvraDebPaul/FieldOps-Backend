@@ -10,7 +10,7 @@ const envSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(20),
   JWT_ACCESS_EXPIRES: z.string().default("1d"),
   JWT_REFRESH_EXPIRES: z.string().default("7d"),
-  // GOOGLE_CLIENT_ID: z.string(),
+  GOOGLE_CLIENT_ID: z.string().optional(),
   // REDIS_URL: z.string().optional(),
   // CLOUDINARY_CLOUD_NAME: z.string(),
   // CLOUDINARY_API_KEY: z.string(),

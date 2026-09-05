@@ -9,11 +9,49 @@ import {
 import httpStatus from "http-status";
 import bcrypt from "bcryptjs";
 import config from "../../config";
-import { Role } from "../../../generated/prisma/enums";
+import {
+  AuthProvider,
+  Role,
+  UserStatus,
+} from "../../../generated/prisma/enums";
 import crypto from "crypto";
 import { jwtUtils } from "../../utils/jwt";
 import jwt from "jsonwebtoken";
 import { RequestUser } from "../../middleware/checkAuth";
+import { verifyGoogleIdToken } from "../../lib/googleAuth";
+
+const hashToken = (token: string) =>
+  crypto.createHash("sha256").update(token).digest("hex");
+
+const issueTokens = async (payload: IJwtPayload) => {
+  const accessToken = jwtUtils.createToken(
+    payload,
+    config.JWT_ACCESS_SECRET,
+    config.JWT_ACCESS_EXPIRES,
+  );
+
+  const refreshToken = jwtUtils.createToken(
+    payload,
+    config.JWT_REFRESH_SECRET,
+    config.JWT_REFRESH_EXPIRES,
+  );
+
+  const decoded = jwt.decode(refreshToken) as { exp?: number };
+
+  const expiresAt = decoded?.exp
+    ? new Date(decoded.exp * 1000)
+    : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+  await prisma.refreshToken.create({
+    data: {
+      userId: payload.userId,
+      tokenHash: hashToken(refreshToken),
+      expiresAt,
+    },
+  });
+
+  return { accessToken, refreshToken };
+};
 
 const register = async (payload: IRegisterPayload) => {
   const { name, email, password, phone, companyName, billingAddr } = payload;
@@ -48,35 +86,6 @@ const register = async (payload: IRegisterPayload) => {
   return user;
 };
 
-const hashToken = (token: string) =>
-  crypto.createHash("sha256").update(token).digest("hex");
-
-const issueTokens = async (payload: IJwtPayload) => {
-  const accessToken = jwtUtils.createToken(
-    payload,
-    config.JWT_ACCESS_SECRET,
-    config.JWT_ACCESS_EXPIRES,
-  );
-
-  const refreshToken = jwtUtils.createToken(
-    payload,
-    config.JWT_REFRESH_SECRET,
-    config.JWT_REFRESH_EXPIRES,
-  );
-
-  const { exp } = jwt.decode(refreshToken) as { exp: number };
-
-  await prisma.refreshToken.create({
-    data: {
-      userId: payload.userId,
-      tokenHash: hashToken(refreshToken),
-      expiresAt: new Date(exp * 1000),
-    },
-  });
-
-  return { accessToken, refreshToken };
-};
-
 const login = async (payload: ILoginPayload) => {
   const user = await prisma.user.findUnique({
     where: { email: payload.email },
@@ -107,6 +116,83 @@ const login = async (payload: ILoginPayload) => {
     );
   }
 
+  const tokens = await issueTokens({
+    userId: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+  });
+
+  const { password, ...safeUser } = user;
+
+  return { ...tokens, user: safeUser };
+};
+
+const googleLogin = async (idToken: string) => {
+  const payload = await verifyGoogleIdToken(idToken);
+
+  const email = payload.email;
+  if (!email) {
+    throw new AppError(
+      httpStatus.UNAUTHORIZED,
+      "Google account email is required.",
+    );
+  }
+  const name = payload.name || payload.given_name || "Google User";
+  const googleId = payload.sub;
+  const avatarUrl = payload.picture;
+
+  let user = await prisma.user.findFirst({
+    where: {
+      OR: [{ email }, { googleId }],
+    },
+    include: { customer: true },
+  });
+
+  if (user) {
+    if (user.deletedAt) {
+      throw new AppError(
+        httpStatus.UNAUTHORIZED,
+        "Your account has been deactivated. Please contact support.",
+      );
+    }
+    if (user.status === UserStatus.SUSPENDED) {
+      throw new AppError(
+        httpStatus.FORBIDDEN,
+        "Your account has been suspended. Please contact support.",
+      );
+    }
+    if (!user.googleId || !user.avatarUrl) {
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          googleId: user.googleId || googleId,
+          avatarUrl: user.avatarUrl || avatarUrl,
+        },
+        include: { customer: true },
+      });
+    }
+  } else {
+    user = await prisma.$transaction(async (tx) => {
+      return tx.user.create({
+        data: {
+          name,
+          email,
+          googleId,
+          avatarUrl,
+          provider: AuthProvider.GOOGLE,
+          role: Role.CUSTOMER,
+          customer: {
+            create: {
+              companyName: `${name}'s Company`,
+              billingAddr: "Not provided",
+            },
+          },
+        },
+        include: { customer: true },
+      });
+    });
+  }
   const tokens = await issueTokens({
     userId: user.id,
     email: user.email,
@@ -220,4 +306,5 @@ export const AuthService = {
   logout,
   refreshToken,
   changePassword,
+  googleLogin,
 };

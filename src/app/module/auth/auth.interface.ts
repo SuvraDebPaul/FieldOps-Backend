@@ -30,3 +30,7 @@ export interface IChnagePassword {
   oldPassword: string;
   newPassword: string;
 }
+
+export interface IGoogleLoginPayload {
+  idToken: string;
+}

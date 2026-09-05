@@ -12,7 +12,7 @@ const accessCookieOptions = {
   httpOnly: true,
   secure: isProd,
   sameSite: isProd ? ("none" as const) : ("lax" as const),
-  maxAge: 24 * 60 * 1000,
+  maxAge: 24 * 60 * 60 * 1000,
 };
 
 const refreshCookieOptions = {
@@ -43,6 +43,20 @@ const login = catchAsync(async (req: Request, res: Response) => {
     statusCode: httpStatus.OK,
     success: true,
     message: "Logged in successfully",
+    data: { accessToken, refreshToken, user },
+  });
+});
+
+const googleLogin = catchAsync(async (req: Request, res: Response) => {
+  const { accessToken, refreshToken, user } = await AuthService.googleLogin(
+    req.body.idToken,
+  );
+  res.cookie("accessToken", accessToken, accessCookieOptions);
+  res.cookie("refreshToken", refreshToken, refreshCookieOptions);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Google login successful",
     data: { accessToken, refreshToken, user },
   });
 });
@@ -96,4 +110,5 @@ export const AuthController = {
   logout,
   refreshToken,
   changePassword,
+  googleLogin,
 };
