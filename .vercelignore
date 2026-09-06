@@ -1,0 +1,7 @@
+node_modules
+dist
+.env
+.env.*
+public/google-signin.html
+docs
+TASKS.md

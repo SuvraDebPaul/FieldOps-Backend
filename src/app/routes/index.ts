@@ -7,6 +7,7 @@ import { WorkOrderRoutes } from "../module/workOrder/workOrder.route";
 import { InvoiceRoutes } from "../module/invoice/invoice.route";
 import { PaymentRoutes } from "../module/payment/payment.route";
 import { SiteRoutes } from "../module/site/site.route";
+import { FeedbackRoutes } from "../module/feedback/feedback.route";
 import {
   ServiceCategoryRoutes,
   SkillRoutes,
@@ -25,6 +26,7 @@ const moduleRoutes: { path: string; route: Router }[] = [
   { path: "/sites", route: SiteRoutes },
   { path: "/categories", route: ServiceCategoryRoutes },
   { path: "/skills", route: SkillRoutes },
+  { path: "/feedbacks", route: FeedbackRoutes },
 ];
 
 moduleRoutes.forEach(({ path, route }) => router.use(path, route));

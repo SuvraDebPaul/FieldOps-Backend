@@ -2,6 +2,8 @@ import { Router } from "express";
 import { Role } from "../../../generated/prisma/enums";
 import { auth } from "../../middleware/checkAuth";
 import { validateRequest } from "../../middleware/validateRequest";
+import { FeedbackController } from "../feedback/feedback.controller";
+import { SubmitFeedbackValidationZodSchema } from "../feedback/feedback.validation";
 import { InvoiceController } from "../invoice/invoice.controller";
 import { WorkOrderController } from "./workOrder.controller";
 import {
@@ -58,6 +60,20 @@ router.post(
 	"/:workOrderId/invoice",
 	auth(Role.ADMIN),
 	InvoiceController.generateInvoice,
+);
+
+// Customer feedback closes the flow: rate the job once it has been paid.
+router.post(
+	"/:workOrderId/feedback",
+	auth(Role.CUSTOMER),
+	validateRequest(SubmitFeedbackValidationZodSchema),
+	FeedbackController.submitFeedback,
+);
+
+router.get(
+	"/:workOrderId/feedback",
+	auth(Role.ADMIN, Role.CUSTOMER, Role.TECHNICIAN),
+	FeedbackController.getWorkOrderFeedback,
 );
 
 export const WorkOrderRoutes = router;

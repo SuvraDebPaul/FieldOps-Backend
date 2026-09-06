@@ -6,12 +6,13 @@
     "moduleResolution": "bundler",
     "types": ["node"],
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": "./",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "api/**/*", "prisma.config.ts"],
+  "exclude": ["node_modules", "dist"]
 }
