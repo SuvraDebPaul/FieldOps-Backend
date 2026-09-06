@@ -1,18 +1,12 @@
 import type { Response } from "express";
-
-type TMeta = {
-  page: number;
-  limit: number;
-  total: number;
-  totalPage: number;
-};
+import type { IMeta } from "../interfaces";
 
 type TResponseData<T> = {
   success: boolean;
   statusCode: number;
   message: string;
   data: T;
-  meta?: TMeta;
+  meta?: IMeta;
 };
 
 export const sendResponse = <T>(res: Response, payload: TResponseData<T>) => {

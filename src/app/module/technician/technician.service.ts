@@ -86,7 +86,7 @@ const getTechnicians = async (query: ITechnicianFilterQuery) => {
       page: pageNum,
       limit: limitNum,
       total,
-      totalPage: Math.ceil(total / limitNum),
+      totalPages: Math.ceil(total / limitNum),
     },
     data,
   };
