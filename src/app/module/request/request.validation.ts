@@ -47,10 +47,3 @@ export const UpdateServiceRequestValidationZodSchema = z.object({
 
 	preferredAt: z.iso.datetime("preferredAt must be an ISO datetime").optional(),
 });
-
-export const RejectServiceRequestValidationZodSchema = z.object({
-	rejectReason: z
-		.string()
-		.trim()
-		.min(5, "A rejection reason of at least 5 characters is required"),
-});

@@ -17,7 +17,3 @@ export interface IUpdateServiceRequestPayload {
 	priority?: Priority;
 	preferredAt?: string;
 }
-
-export interface IRejectServiceRequestPayload {
-	rejectReason: string;
-}

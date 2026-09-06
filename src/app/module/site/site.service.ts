@@ -58,8 +58,7 @@ const getAllSites = async (query: IQuery, user: RequestUser) => {
 	}
 
 	if (user.role === Role.CUSTOMER) {
-		const customer = await getCustomerProfileOrThrow(user.userId);
-		andConditions.push({ customerId: customer.id });
+		andConditions.push({ customer: { userId: user.userId } });
 	} else if (query.customerId) {
 		andConditions.push({ customerId: query.customerId as string });
 	}

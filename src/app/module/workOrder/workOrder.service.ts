@@ -25,18 +25,6 @@ import type {
 	IRescheduleWorkOrderPayload,
 } from "./workOrder.interface";
 
-const getTechnicianProfileOrThrow = async (userId: string) => {
-	const technician = await prisma.technicianProfile.findUnique({
-		where: { userId },
-	});
-
-	if (!technician) {
-		throw new AppError(httpStatus.NOT_FOUND, "Technician Profile Not Found");
-	}
-
-	return technician;
-};
-
 const assertValidWindow = (startISO: string, endISO: string) => {
 	const start = new Date(startISO);
 	const end = new Date(endISO);
@@ -302,9 +290,9 @@ const getAllWorkOrders = async (query: IQuery, user: RequestUser) => {
 	const andConditions = buildWorkOrderFilters(query);
 
 	// Same route, three audiences — scoped here, never in the route.
+	// Both filter through the relation, so neither needs a profile lookup first.
 	if (user.role === Role.TECHNICIAN) {
-		const technician = await getTechnicianProfileOrThrow(user.userId);
-		andConditions.push({ technicianId: technician.id });
+		andConditions.push({ technician: { userId: user.userId } });
 	}
 
 	if (user.role === Role.CUSTOMER) {
@@ -329,15 +317,13 @@ const getAllWorkOrders = async (query: IQuery, user: RequestUser) => {
 };
 
 const getMyAssignedWorkOrders = async (query: IQuery, user: RequestUser) => {
-	const technician = await getTechnicianProfileOrThrow(user.userId);
-
 	const { page, limit, skip, sortBy, sortOrder } = calculatePagination(
 		query,
 		"scheduledStart",
 	);
 
 	const andConditions = buildWorkOrderFilters(query);
-	andConditions.push({ technicianId: technician.id });
+	andConditions.push({ technician: { userId: user.userId } });
 
 	const where: WorkOrderWhereInput = { AND: andConditions };
 

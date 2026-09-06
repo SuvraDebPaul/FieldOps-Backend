@@ -1,7 +1,6 @@
 import config from "../../config";
 import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
-import { ILoginPayload } from "./auth.interface";
 import { AuthService } from "./auth.service";
 import { Request, Response } from "express";
 import httpStatus from "http-status";

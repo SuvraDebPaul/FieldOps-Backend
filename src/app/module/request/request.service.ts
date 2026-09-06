@@ -124,9 +124,9 @@ const getAllServiceRequests = async (query: IQuery, user: RequestUser) => {
 	}
 
 	// Role scoping lives here, not in the route: one endpoint, two audiences.
+	// Filtering through the relation avoids a second round trip for the profile.
 	if (user.role === Role.CUSTOMER) {
-		const customer = await getCustomerProfileOrThrow(user.userId);
-		andConditions.push({ customerId: customer.id });
+		andConditions.push({ customer: { userId: user.userId } });
 	}
 
 	andConditions.push({ deletedAt: null });

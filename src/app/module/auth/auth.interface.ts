@@ -20,17 +20,7 @@ export interface IJwtPayload {
   name: string;
   role: Role;
 }
-
-export interface IAuthTokens {
-  accessToken: string;
-  refreshToken: string;
-}
-
 export interface IChnagePassword {
   oldPassword: string;
   newPassword: string;
-}
-
-export interface IGoogleLoginPayload {
-  idToken: string;
 }
