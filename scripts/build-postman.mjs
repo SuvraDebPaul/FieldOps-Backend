@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const V = (n) => `{{${n}}}`;
+const BR = String.fromCharCode(10, 10);
 
 function req(name, method, p, opts = {}) {
   const { body, desc = "", token, query, tests, formdata } = opts;
@@ -93,12 +94,19 @@ const auth = [
   }),
   req("Change password", "POST", "/auth/change-password", {
     body: { oldPassword: "Admin@12345", newPassword: "Admin@123456" },
-    desc: "Requires the old password and revokes every refresh token for that user, ending all other sessions.",
+    desc:
+      "Requires the old password and revokes every refresh token for that user, ending all other " +
+      "sessions." + BR +
+      "RUN THIS LAST. It changes the seeded customer password, so re-running the " +
+      "collection from the top will fail at 'Login (customer)' until you change it back.",
     token: "customerToken",
   }),
   req("Logout", "POST", "/auth/logout", {
     body: {},
-    desc: "Stamps revokedAt on the refresh token and clears both cookies.",
+    desc:
+      "Stamps revokedAt on the refresh token and clears both cookies." + BR +
+      "RUN THIS LAST - it ends the " +
+      "session the rest of the collection depends on.",
   }),
 ];
 
@@ -136,14 +144,16 @@ const catalog = [
       baseCharge: 180,
       estimatedMins: 120,
     },
+    desc: "Captures {{newCategoryId}} so the update and delete below act on this one, leaving {{categoryId}} intact for the request flow.",
     token: "adminToken",
+    tests: saveId("newCategoryId"),
   }),
-  req("Update category (admin)", "PATCH", "/categories/{{categoryId}}", {
+  req("Update category (admin)", "PATCH", "/categories/{{newCategoryId}}", {
     body: { baseCharge: 210 },
     token: "adminToken",
   }),
-  req("Delete category (admin, soft)", "DELETE", "/categories/{{categoryId}}", {
-    desc: "Soft delete: sets deletedAt and isActive=false so historical requests still resolve their category.",
+  req("Delete category (admin, soft)", "DELETE", "/categories/{{newCategoryId}}", {
+    desc: "Soft delete: sets deletedAt and isActive=false so historical requests still resolve their category. Acts on the category created above, not the one the request flow uses.",
     token: "adminToken",
   }),
   req("List skills (public)", "GET", "/skills", {}),
@@ -223,11 +233,21 @@ const requests = [
     desc: "Refused once a dispatcher has acted on the request.",
     token: "customerToken",
   }),
-  req("Cancel request", "PATCH", "/requests/{{requestId}}/cancel", {
-    desc: "Customer only, PENDING only.",
+  req("Create a throwaway request (for cancel / delete)", "POST", "/requests", {
+    body: {
+      siteId: "{{siteId}}",
+      categoryId: "{{categoryId}}",
+      title: "Spare request used to demo cancel and delete",
+      description: "Created so the cancel and delete demos below do not consume the request that the work-order flow needs.",
+    },
+    token: "customerToken",
+    tests: saveId("throwawayRequestId"),
+  }),
+  req("Cancel request", "PATCH", "/requests/{{throwawayRequestId}}/cancel", {
+    desc: "Customer only, PENDING only. Acts on the throwaway request.",
     token: "customerToken",
   }),
-  req("Delete request (admin, soft)", "DELETE", "/requests/{{requestId}}", {
+  req("Delete request (admin, soft)", "DELETE", "/requests/{{throwawayRequestId}}", {
     desc: "Soft delete. Refused for CONVERTED requests, which already have a work order.",
     token: "adminToken",
   }),
@@ -536,6 +556,8 @@ const collection = {
     "invoiceId",
     "transactionId",
     "targetUserId",
+    "newCategoryId",
+    "throwawayRequestId",
   ].map((key) => ({ key, value: key === "baseUrl" ? "http://localhost:5000" : "" })),
   item: [
     { name: "01 Auth", item: auth, description: "Email/password and Google social login, refresh-token rotation, logout, change password." },

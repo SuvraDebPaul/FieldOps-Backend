@@ -64,6 +64,14 @@
     {
       "key": "targetUserId",
       "value": ""
+    },
+    {
+      "key": "newCategoryId",
+      "value": ""
+    },
+    {
+      "key": "throwawayRequestId",
+      "value": ""
     }
   ],
   "item": [
@@ -401,7 +409,7 @@
                 "change-password"
               ]
             },
-            "description": "Requires the old password and revokes every refresh token for that user, ending all other sessions.",
+            "description": "Requires the old password and revokes every refresh token for that user, ending all other sessions.\n\nRUN THIS LAST. It changes the seeded customer password, so re-running the collection from the top will fail at 'Login (customer)' until you change it back.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"oldPassword\": \"Admin@12345\",\n  \"newPassword\": \"Admin@123456\"\n}"
@@ -431,7 +439,7 @@
                 "logout"
               ]
             },
-            "description": "Stamps revokedAt on the refresh token and clears both cookies.",
+            "description": "Stamps revokedAt on the refresh token and clears both cookies.\n\nRUN THIS LAST - it ends the session the rest of the collection depends on.",
             "body": {
               "mode": "raw",
               "raw": "{}"
@@ -638,13 +646,25 @@
                 "categories"
               ]
             },
-            "description": "",
+            "description": "Captures {{newCategoryId}} so the update and delete below act on this one, leaving {{categoryId}} intact for the request flow.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Switchgear Thermal Imaging\",\n  \"description\": \"Infrared survey of LV/HV switchgear under load.\",\n  \"requiredSkillId\": \"{{skillId}}\",\n  \"baseCharge\": 180,\n  \"estimatedMins\": 120\n}"
             }
           },
-          "response": []
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json().data;",
+                  "if (d && d.id) pm.collectionVariables.set(\"newCategoryId\", d.id);"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Update category (admin)",
@@ -661,7 +681,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/categories/{{categoryId}}",
+              "raw": "{{baseUrl}}/api/v1/categories/{{newCategoryId}}",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -669,7 +689,7 @@
                 "api",
                 "v1",
                 "categories",
-                "{{categoryId}}"
+                "{{newCategoryId}}"
               ]
             },
             "description": "",
@@ -691,7 +711,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/categories/{{categoryId}}",
+              "raw": "{{baseUrl}}/api/v1/categories/{{newCategoryId}}",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -699,10 +719,10 @@
                 "api",
                 "v1",
                 "categories",
-                "{{categoryId}}"
+                "{{newCategoryId}}"
               ]
             },
-            "description": "Soft delete: sets deletedAt and isActive=false so historical requests still resolve their category."
+            "description": "Soft delete: sets deletedAt and isActive=false so historical requests still resolve their category. Acts on the category created above, not the one the request flow uses."
           },
           "response": []
         },
@@ -1164,6 +1184,51 @@
           "response": []
         },
         {
+          "name": "Create a throwaway request (for cancel / delete)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/requests",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "requests"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"siteId\": \"{{siteId}}\",\n  \"categoryId\": \"{{categoryId}}\",\n  \"title\": \"Spare request used to demo cancel and delete\",\n  \"description\": \"Created so the cancel and delete demos below do not consume the request that the work-order flow needs.\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json().data;",
+                  "if (d && d.id) pm.collectionVariables.set(\"throwawayRequestId\", d.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Cancel request",
           "request": {
             "method": "PATCH",
@@ -1174,7 +1239,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/requests/{{requestId}}/cancel",
+              "raw": "{{baseUrl}}/api/v1/requests/{{throwawayRequestId}}/cancel",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -1182,11 +1247,11 @@
                 "api",
                 "v1",
                 "requests",
-                "{{requestId}}",
+                "{{throwawayRequestId}}",
                 "cancel"
               ]
             },
-            "description": "Customer only, PENDING only."
+            "description": "Customer only, PENDING only. Acts on the throwaway request."
           },
           "response": []
         },
@@ -1201,7 +1266,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/requests/{{requestId}}",
+              "raw": "{{baseUrl}}/api/v1/requests/{{throwawayRequestId}}",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -1209,7 +1274,7 @@
                 "api",
                 "v1",
                 "requests",
-                "{{requestId}}"
+                "{{throwawayRequestId}}"
               ]
             },
             "description": "Soft delete. Refused for CONVERTED requests, which already have a work order."
