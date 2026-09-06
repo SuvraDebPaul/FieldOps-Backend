@@ -400,6 +400,57 @@ const feedback = [
   }),
 ];
 
+
+const admin = [
+  req("List users", "GET", "/admin/users", {
+    query: { page: 1, limit: 10 },
+    desc:
+      "ADMIN only. Filters: role, status, searchTerm (name / email / phone). Passwords are removed at " +
+      "the query with Prisma omit, so they cannot leak from this endpoint.",
+    token: "adminToken",
+    tests: [
+      "const d = pm.response.json().data;",
+      "const t = d.find(u => u.role === 'TECHNICIAN');",
+      "if (t) pm.collectionVariables.set('targetUserId', t.id);",
+    ],
+  }),
+  req("Filter users by role", "GET", "/admin/users", {
+    query: { role: "TECHNICIAN", status: "ACTIVE" },
+    token: "adminToken",
+  }),
+  req("Get single user", "GET", "/admin/users/{{targetUserId}}", {
+    desc: "Includes the customer or technician profile, sites and skills.",
+    token: "adminToken",
+  }),
+  req("Suspend a user", "PATCH", "/admin/users/{{targetUserId}}/status", {
+    body: { status: "SUSPENDED", reason: "Licence lapsed pending renewal." },
+    desc:
+      "Takes effect immediately, not when the access token expires: checkAuth re-reads the user on " +
+      "every request, and all refresh tokens are revoked in the same transaction so the session cannot " +
+      "be renewed.",
+    token: "adminToken",
+  }),
+  req("Reactivate a user", "PATCH", "/admin/users/{{targetUserId}}/status", {
+    body: { status: "ACTIVE" },
+    token: "adminToken",
+  }),
+  req("Change a user role", "PATCH", "/admin/users/{{targetUserId}}/role", {
+    body: { role: "ADMIN" },
+    desc:
+      "Refused if the target has no profile for the new role, so a role change cannot orphan a " +
+      "customer or technician record. Revokes refresh tokens, since the old role is baked into any " +
+      "live token.",
+    token: "adminToken",
+  }),
+  req("400 - admin changes own status", "PATCH", "/admin/users/{{targetUserId}}/status", {
+    body: { status: "SUSPENDED" },
+    desc:
+      "Point this at the admin's own id. Refused, because an admin locking themselves out would need " +
+      "database access to recover.",
+    token: "adminToken",
+  }),
+];
+
 const authz = [
   req("403 - technician B reads technician A's job", "GET", "/work-orders/{{workOrderId}}", {
     desc:
@@ -484,6 +535,7 @@ const collection = {
     "workOrderId",
     "invoiceId",
     "transactionId",
+    "targetUserId",
   ].map((key) => ({ key, value: key === "baseUrl" ? "http://localhost:5000" : "" })),
   item: [
     { name: "01 Auth", item: auth, description: "Email/password and Google social login, refresh-token rotation, logout, change password." },
@@ -495,7 +547,8 @@ const collection = {
     { name: "07 Assignment & work orders", item: workOrders },
     { name: "08 Invoices & payments", item: money },
     { name: "09 Customer feedback", item: feedback, description: "Final step of the service flow: the customer rates the completed, paid job and the technician rating is recomputed." },
-    { name: "10 Authorization & error demos", item: authz, description: "The 401 / 403 / 409 / 400 cases, grouped so a reviewer can run them in one pass." },
+    { name: "10 Admin user management", item: admin, description: "ADMIN-only account administration: list, inspect, suspend / reactivate, and change roles." },
+    { name: "11 Authorization & error demos", item: authz, description: "The 401 / 403 / 409 / 400 cases, grouped so a reviewer can run them in one pass." },
   ],
 };
 

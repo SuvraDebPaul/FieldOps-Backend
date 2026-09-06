@@ -140,7 +140,7 @@ the Stripe webhook reaches it.
 |---|---|
 | `CUSTOMER` | Register, manage profile and sites, create / edit / cancel own requests, view own work orders and invoices, pay, leave feedback |
 | `TECHNICIAN` | View **only** assigned work orders, drive EN_ROUTE → IN_PROGRESS → COMPLETED, log parts |
-| `ADMIN` | Approve / reject requests, assign and reschedule technicians, manage catalog, view everything |
+| `ADMIN` | Approve / reject requests, assign and reschedule technicians, manage the catalog, suspend / reactivate accounts, change roles, view everything |
 
 `auth(...roles)` answers *"is this person an admin?"*. It cannot answer *"is this **their** job?"* — that
 ownership check lives in the service, where the record has been loaded. Both are enforced:
@@ -150,6 +150,7 @@ Technician B → Technician A's work order   403  This Job Is Not Assigned To Yo
 Customer B  → Customer A's invoice         403  This Is Not Your Invoice
 Technician  → admin-only reschedule        403  no permission
 Customer    → approve a request            403  no permission
+Customer    → GET /admin/users             403  no permission
 ```
 
 `checkAuth` also re-reads the user from the database on every request, so a suspension, deletion or role
@@ -192,6 +193,7 @@ SQLSTATE `23P01`, which the global error handler maps to **409 Conflict**.
 | Complete → generate invoice | Labour from **actual** times, parts summed, VAT applied, `INV-` allocated, status → `INVOICED`. |
 | Stripe webhook → settle | `Serializable` and **idempotent**: looks up by our `transactionId`, exits early if already `SUCCESS`, re-verifies the charged amount, then marks payment → invoice → work order paid. |
 | Submit feedback | Insert the rating and recompute the technician's `ratingAvg` / `ratingCount` together, so the stored average can never drift from the rows behind it. |
+| Suspend / change role | Update the user and revoke every live refresh token in one transaction, so access cannot outlive the decision. |
 
 ---
 
@@ -325,6 +327,22 @@ demos, is in the Postman collection.
 | POST | `/payments/initiate` | CUSTOMER · ADMIN |
 | POST | `/payments/webhook` | Stripe only (signature-verified) |
 | GET | `/payments/:transactionId` | ownership-checked |
+
+</details>
+
+<details>
+<summary><strong>Admin user management</strong> (4)</summary>
+
+| Method | Path | Access |
+|---|---|---|
+| GET | `/admin/users` | ADMIN — `?role&status&searchTerm&page&limit` |
+| GET | `/admin/users/:userId` | ADMIN |
+| PATCH | `/admin/users/:userId/status` | ADMIN — suspend / reactivate |
+| PATCH | `/admin/users/:userId/role` | ADMIN |
+
+Suspension takes effect on the account's **next request**, not when its token expires: `checkAuth`
+re-reads the user every time, and the same transaction revokes every refresh token so the session cannot
+be renewed. An admin cannot change their own status or role.
 
 </details>
 
