@@ -37,12 +37,14 @@
     <!-- Replace with your own client id, or set it via ?client_id= in the URL. -->
     <div
       id="g_id_onload"
-      data-client_id="YOUR_CLIENT_ID.apps.googleusercontent.com"
+      data-client_id="425977015643-29j7c2eett14g99coc783qt12mr8v8mj.apps.googleusercontent.com"
       data-callback="onSignIn"
       data-auto_prompt="false"
     ></div>
 
     <div class="g_id_signin" data-type="standard" data-size="large"></div>
+
+    <p id="active" class="hint"></p>
 
     <textarea id="out" readonly placeholder="id_token will appear here"></textarea>
 
@@ -52,6 +54,16 @@
       const override = new URLSearchParams(location.search).get("client_id");
       if (override) {
         document.getElementById("g_id_onload").dataset.client_id = override;
+      }
+
+      const active = document.getElementById("g_id_onload").dataset.client_id;
+      const banner = document.getElementById("active");
+      if (!active || active.startsWith("YOUR_CLIENT_ID")) {
+        banner.textContent =
+          "No client id configured. Open this page with ?client_id=... or edit data-client_id.";
+        banner.style.color = "#b91c1c";
+      } else {
+        banner.textContent = "Using client id: " + active;
       }
 
       function onSignIn(response) {
