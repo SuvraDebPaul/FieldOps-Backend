@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>FieldOps — Google Sign-In (dev helper)</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 720px;
+        margin: 60px auto;
+        padding: 0 20px;
+        line-height: 1.6;
+      }
+      h1 { font-size: 20px; }
+      textarea {
+        width: 100%;
+        height: 160px;
+        font-family: ui-monospace, monospace;
+        font-size: 12px;
+        margin-top: 16px;
+      }
+      .hint { color: #555; font-size: 14px; }
+      code { background: #f4f4f5; padding: 2px 5px; border-radius: 3px; }
+    </style>
+  </head>
+  <body>
+    <h1>FieldOps — get a Google id_token</h1>
+
+    <p class="hint">
+      Serve this file on an origin listed in your Google OAuth client's
+      <em>Authorized JavaScript origins</em> (e.g. <code>npx serve public -l 3000</code>),
+      then sign in. The <code>id_token</code> appears below and is copied to your
+      clipboard — POST it to <code>/api/v1/auth/google</code> as
+      <code>{ "idToken": "..." }</code>.
+    </p>
+
+    <!-- Replace with your own client id, or set it via ?client_id= in the URL. -->
+    <div
+      id="g_id_onload"
+      data-client_id="YOUR_CLIENT_ID.apps.googleusercontent.com"
+      data-callback="onSignIn"
+      data-auto_prompt="false"
+    ></div>
+
+    <div class="g_id_signin" data-type="standard" data-size="large"></div>
+
+    <textarea id="out" readonly placeholder="id_token will appear here"></textarea>
+
+    <script>
+      // Allow overriding the client id without editing the file:
+      //   http://localhost:3000/google-signin.html?client_id=...
+      const override = new URLSearchParams(location.search).get("client_id");
+      if (override) {
+        document.getElementById("g_id_onload").dataset.client_id = override;
+      }
+
+      function onSignIn(response) {
+        const token = response.credential;
+        document.getElementById("out").value = token;
+        navigator.clipboard?.writeText(token);
+        console.log("id_token:", token);
+      }
+    </script>
+
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+  </body>
+</html>

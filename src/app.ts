@@ -13,6 +13,7 @@ import { globalErrorHandeler } from "./app/middleware/globalErrorHandler";
 import config from "./app/config";
 import { apiLimiter } from "./app/middleware/rateLimiter";
 import router from "./app/routes";
+import { PaymentController } from "./app/module/payment/payment.controller";
 
 const app: Application = express();
 
@@ -20,6 +21,15 @@ app.set("trust proxy", 1);
 app.use(helmet());
 app.use(cors({ origin: config.FRONTEND_URL, credentials: true }));
 app.use(apiLimiter);
+
+// Stripe signs the RAW bytes of the request body. This route must therefore be
+// mounted with express.raw() BEFORE express.json(), or the signature check
+// fails on a body that has been parsed and re-serialised.
+app.post(
+  "/api/v1/payments/webhook",
+  express.raw({ type: "application/json" }),
+  PaymentController.handleStripeWebhook,
+);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

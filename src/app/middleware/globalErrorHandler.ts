@@ -7,12 +7,37 @@ import { AppError } from "../utils/AppError";
 
 type TErrorSource = { path: string; message: string };
 
+/**
+ * The no_technician_double_booking exclusion constraint raises SQLSTATE 23P01.
+ *
+ * The pg driver adapter nests the original Postgres error, so the code arrives
+ * at err.meta.driverAdapterError.cause.originalCode rather than err.code
+ * (which Prisma reports as its own P2002/P2010). The extra locations are
+ * fallbacks in case the adapter shape changes.
+ */
 const isDoubleBooking = (err: any): boolean => {
-  const codes = [err?.code, err?.meta?.code, err?.cause?.code];
-  const constraint = String(err?.constraint ?? err?.meta?.constraint ?? "");
+  const adapterCause = err?.meta?.driverAdapterError?.cause;
+
+  const codes = [
+    adapterCause?.originalCode,
+    err?.code,
+    err?.meta?.code,
+    err?.cause?.code,
+  ];
+
+  const constraint = String(
+    adapterCause?.constraint?.index ??
+      adapterCause?.constraint ??
+      err?.meta?.constraint ??
+      "",
+  );
 
   return (
-    codes.includes("23P01") || constraint === "no_technician_double_booking"
+    codes.includes("23P01") ||
+    constraint.includes("no_technician_double_booking") ||
+    String(adapterCause?.originalMessage ?? "").includes(
+      "no_technician_double_booking",
+    )
   );
 };
 
