@@ -2,6 +2,7 @@ import { Router } from "express";
 import { Role } from "../../../generated/prisma/enums";
 import { auth } from "../../middleware/checkAuth";
 import { validateRequest } from "../../middleware/validateRequest";
+import { InvoiceController } from "../invoice/invoice.controller";
 import { WorkOrderController } from "./workOrder.controller";
 import {
 	AddPartUsageValidationZodSchema,
@@ -49,6 +50,14 @@ router.post(
 	auth(Role.TECHNICIAN),
 	validateRequest(AddPartUsageValidationZodSchema),
 	WorkOrderController.addPartUsage,
+);
+
+// Generating the invoice performs the COMPLETED -> INVOICED transition, so it
+// hangs off the work order rather than /invoices.
+router.post(
+	"/:workOrderId/invoice",
+	auth(Role.ADMIN),
+	InvoiceController.generateInvoice,
 );
 
 export const WorkOrderRoutes = router;
