@@ -2,6 +2,11 @@ import { Router } from "express";
 import { Role } from "../../../generated/prisma/enums";
 import { auth } from "../../middleware/checkAuth";
 import { validateRequest } from "../../middleware/validateRequest";
+import { WorkOrderController } from "../workOrder/workOrder.controller";
+import {
+	ApproveServiceRequestValidationZodSchema,
+	RejectServiceRequestValidationZodSchema,
+} from "../workOrder/workOrder.validation";
 import { ServiceRequestController } from "./request.controller";
 import {
 	CreateServiceRequestValidationZodSchema,
@@ -42,6 +47,22 @@ router.patch(
 	"/:requestId/cancel",
 	auth(Role.CUSTOMER),
 	ServiceRequestController.cancelServiceRequest,
+);
+
+// Dispatcher actions. These live in the workOrder module because approving a
+// request is what creates a work order, but they hang off the request URL.
+router.patch(
+	"/:requestId/approve",
+	auth(Role.ADMIN),
+	validateRequest(ApproveServiceRequestValidationZodSchema),
+	WorkOrderController.approveServiceRequest,
+);
+
+router.patch(
+	"/:requestId/reject",
+	auth(Role.ADMIN),
+	validateRequest(RejectServiceRequestValidationZodSchema),
+	WorkOrderController.rejectServiceRequest,
 );
 
 router.delete(
