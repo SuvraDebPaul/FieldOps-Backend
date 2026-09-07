@@ -3,20 +3,20 @@ import {
   InvoiceStatus,
   Role,
   WorkOrderStatus,
-} from "../../../generated/prisma/enums";
-import type { InvoiceWhereInput } from "../../../generated/prisma/models";
-import type { IQuery } from "../../interfaces";
-import { prisma } from "../../lib/prisma";
-import type { RequestUser } from "../../middleware/checkAuth";
-import { AppError } from "../../utils/AppError";
-import { writeAuditLog } from "../../utils/auditLogger";
-import { generateInvoiceNo } from "../../utils/codeGenerator";
-import { buildMeta, calculatePagination } from "../../utils/paginate";
+} from "../../../generated/prisma/enums.js";
+import type { InvoiceWhereInput } from "../../../generated/prisma/models.js";
+import type { IQuery } from "../../interfaces/index.js";
+import { prisma } from "../../lib/prisma.js";
+import type { RequestUser } from "../../middleware/checkAuth.js";
+import { AppError } from "../../utils/AppError.js";
+import { writeAuditLog } from "../../utils/auditLogger.js";
+import { generateInvoiceNo } from "../../utils/codeGenerator.js";
+import { buildMeta, calculatePagination } from "../../utils/paginate.js";
 import {
   INVOICE_DUE_DAYS,
   MINIMUM_BILLABLE_HOURS,
   VAT_RATE,
-} from "./invoice.constant";
+} from "./invoice.constant.js";
 
 const money = (value: number) => Math.round(value * 100) / 100;
 

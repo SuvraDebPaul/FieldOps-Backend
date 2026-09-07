@@ -1,16 +1,16 @@
 import { Router } from "express";
-import { Role } from "../../../generated/prisma/enums";
-import { auth } from "../../middleware/checkAuth";
-import { validateRequest } from "../../middleware/validateRequest";
-import { FeedbackController } from "../feedback/feedback.controller";
-import { SubmitFeedbackValidationZodSchema } from "../feedback/feedback.validation";
-import { InvoiceController } from "../invoice/invoice.controller";
-import { WorkOrderController } from "./workOrder.controller";
+import { Role } from "../../../generated/prisma/enums.js";
+import { auth } from "../../middleware/checkAuth.js";
+import { validateRequest } from "../../middleware/validateRequest.js";
+import { FeedbackController } from "../feedback/feedback.controller.js";
+import { SubmitFeedbackValidationZodSchema } from "../feedback/feedback.validation.js";
+import { InvoiceController } from "../invoice/invoice.controller.js";
+import { WorkOrderController } from "./workOrder.controller.js";
 import {
   AddPartUsageValidationZodSchema,
   ChangeWorkOrderStatusValidationZodSchema,
   RescheduleWorkOrderValidationZodSchema,
-} from "./workOrder.validation";
+} from "./workOrder.validation.js";
 
 const router = Router();
 

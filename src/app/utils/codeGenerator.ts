@@ -1,4 +1,4 @@
-import { prisma } from "../lib/prisma";
+import { prisma } from "../lib/prisma.js";
 
 type PrismaLike = Pick<typeof prisma, "$queryRawUnsafe">;
 

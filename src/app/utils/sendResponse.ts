@@ -1,5 +1,5 @@
 import type { Response } from "express";
-import type { IMeta } from "../interfaces";
+import type { IMeta } from "../interfaces/index.js";
 
 type TResponseData<T> = {
   success: boolean;

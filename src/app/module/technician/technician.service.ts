@@ -1,5 +1,5 @@
-import { prisma } from "../../lib/prisma";
-import type { ITechnicianFilterQuery } from "../user/user.interface";
+import { prisma } from "../../lib/prisma.js";
+import type { ITechnicianFilterQuery } from "../user/user.interface.js";
 
 const getTechnicians = async (query: ITechnicianFilterQuery) => {
   const {

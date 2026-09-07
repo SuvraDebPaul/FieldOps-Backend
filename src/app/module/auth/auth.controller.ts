@@ -1,7 +1,7 @@
-import config from "../../config";
-import { catchAsync } from "../../utils/catchAsync";
-import { sendResponse } from "../../utils/sendResponse";
-import { AuthService } from "./auth.service";
+import config from "../../config/index.js";
+import { catchAsync } from "../../utils/catchAsync.js";
+import { sendResponse } from "../../utils/sendResponse.js";
+import { AuthService } from "./auth.service.js";
 import { Request, Response } from "express";
 import httpStatus from "http-status";
 

@@ -1,8 +1,8 @@
 import type { Request, Response } from "express";
 import httpStatus from "http-status";
-import { catchAsync } from "../../utils/catchAsync";
-import { sendResponse } from "../../utils/sendResponse";
-import { CatalogServices } from "./catalog.service";
+import { catchAsync } from "../../utils/catchAsync.js";
+import { sendResponse } from "../../utils/sendResponse.js";
+import { CatalogServices } from "./catalog.service.js";
 
 const getAllServiceCategories = catchAsync(
   async (req: Request, res: Response) => {

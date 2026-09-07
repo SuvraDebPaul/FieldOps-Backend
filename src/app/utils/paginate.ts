@@ -1,4 +1,4 @@
-import type { IMeta, IQuery } from "../interfaces";
+import type { IMeta, IQuery } from "../interfaces/index.js";
 
 export type TPaginationOptions = {
   page: number;

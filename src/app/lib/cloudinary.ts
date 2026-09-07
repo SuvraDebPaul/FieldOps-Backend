@@ -1,6 +1,6 @@
 import { v2 as cloudinary } from "cloudinary";
-import config from "../config";
-import { AppError } from "../utils/AppError";
+import config from "../config/index.js";
+import { AppError } from "../utils/AppError.js";
 import httpStatus from "http-status";
 
 cloudinary.config({

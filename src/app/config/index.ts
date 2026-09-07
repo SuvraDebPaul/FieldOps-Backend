@@ -24,6 +24,16 @@ const envSchema = z.object({
   STRIPE_CURRENCY: z.string().default("usd"),
 });
 
-const config = envSchema.parse(process.env);
+const parsed = envSchema.safeParse(process.env);
+
+if (!parsed.success) {
+  const missing = parsed.error.issues
+    .map((i) => `${i.path.join(".")}: ${i.message}`)
+    .join("; ");
+
+  throw new Error(`Invalid environment configuration -> ${missing}`);
+}
+
+const config = parsed.data;
 
 export default config;

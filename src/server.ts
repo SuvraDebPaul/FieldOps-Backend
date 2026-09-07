@@ -1,7 +1,7 @@
-import app from "./app";
-import config from "./app/config";
-import { prisma } from "./app/lib/prisma";
-import { seedDatabase } from "./app/utils/seed";
+import app from "./app.js";
+import config from "./app/config/index.js";
+import { prisma } from "./app/lib/prisma.js";
+import { seedDatabase } from "./app/utils/seed.js";
 
 const PORT = config.PORT;
 const main = async () => {

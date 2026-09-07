@@ -1,5 +1,5 @@
-import type { Prisma } from "../../generated/prisma/client";
-import { prisma } from "../lib/prisma";
+import type { Prisma } from "../../generated/prisma/client.js";
+import { prisma } from "../lib/prisma.js";
 
 type TAuditClient = Prisma.TransactionClient | typeof prisma;
 

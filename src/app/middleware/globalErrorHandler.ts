@@ -1,9 +1,9 @@
-import config from "../config";
+import config from "../config/index.js";
 import type { NextFunction, Request, Response } from "express";
 import httpStatus from "http-status";
 import { ZodError } from "zod";
-import { Prisma } from "../../generated/prisma/client";
-import { AppError } from "../utils/AppError";
+import { Prisma } from "../../generated/prisma/client.js";
+import { AppError } from "../utils/AppError.js";
 
 type TErrorSource = { path: string; message: string };
 

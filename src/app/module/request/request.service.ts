@@ -1,16 +1,16 @@
 import httpStatus from "http-status";
-import { Priority, RequestStatus, Role } from "../../../generated/prisma/enums";
-import type { ServiceRequestWhereInput } from "../../../generated/prisma/models";
-import type { IQuery } from "../../interfaces";
-import { prisma } from "../../lib/prisma";
-import type { RequestUser } from "../../middleware/checkAuth";
-import { AppError } from "../../utils/AppError";
-import { generateRequestCode } from "../../utils/codeGenerator";
-import { buildMeta, calculatePagination } from "../../utils/paginate";
+import { Priority, RequestStatus, Role } from "../../../generated/prisma/enums.js";
+import type { ServiceRequestWhereInput } from "../../../generated/prisma/models.js";
+import type { IQuery } from "../../interfaces/index.js";
+import { prisma } from "../../lib/prisma.js";
+import type { RequestUser } from "../../middleware/checkAuth.js";
+import { AppError } from "../../utils/AppError.js";
+import { generateRequestCode } from "../../utils/codeGenerator.js";
+import { buildMeta, calculatePagination } from "../../utils/paginate.js";
 import type {
   ICreateServiceRequestPayload,
   IUpdateServiceRequestPayload,
-} from "./request.interface";
+} from "./request.interface.js";
 
 const getCustomerProfileOrThrow = async (userId: string) => {
   const customer = await prisma.customerProfile.findUnique({

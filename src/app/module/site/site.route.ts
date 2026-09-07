@@ -1,12 +1,12 @@
 import { Router } from "express";
-import { Role } from "../../../generated/prisma/enums";
-import { auth } from "../../middleware/checkAuth";
-import { validateRequest } from "../../middleware/validateRequest";
-import { SiteController } from "./site.controller";
+import { Role } from "../../../generated/prisma/enums.js";
+import { auth } from "../../middleware/checkAuth.js";
+import { validateRequest } from "../../middleware/validateRequest.js";
+import { SiteController } from "./site.controller.js";
 import {
   CreateSiteValidationZodSchema,
   UpdateSiteValidationZodSchema,
-} from "./site.validation";
+} from "./site.validation.js";
 
 const router = Router();
 

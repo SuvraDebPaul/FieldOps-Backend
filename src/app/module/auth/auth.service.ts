@@ -1,24 +1,24 @@
-import { prisma } from "../../lib/prisma";
-import { AppError } from "../../utils/AppError";
+import { prisma } from "../../lib/prisma.js";
+import { AppError } from "../../utils/AppError.js";
 import {
   IChnagePassword,
   IJwtPayload,
   ILoginPayload,
   IRegisterPayload,
-} from "./auth.interface";
+} from "./auth.interface.js";
 import httpStatus from "http-status";
 import bcrypt from "bcryptjs";
-import config from "../../config";
+import config from "../../config/index.js";
 import {
   AuthProvider,
   Role,
   UserStatus,
-} from "../../../generated/prisma/enums";
+} from "../../../generated/prisma/enums.js";
 import crypto from "crypto";
-import { jwtUtils } from "../../utils/jwt";
+import { jwtUtils } from "../../utils/jwt.js";
 import jwt from "jsonwebtoken";
-import { RequestUser } from "../../middleware/checkAuth";
-import { verifyGoogleIdToken } from "../../lib/googleAuth";
+import { RequestUser } from "../../middleware/checkAuth.js";
+import { verifyGoogleIdToken } from "../../lib/googleAuth.js";
 
 const hashToken = (token: string) =>
   crypto.createHash("sha256").update(token).digest("hex");

@@ -1,11 +1,11 @@
 import { Request, Response, NextFunction } from "express";
-import { Role } from "../../generated/prisma/enums";
-import { catchAsync } from "../utils/catchAsync";
-import { AppError } from "../utils/AppError";
+import { Role } from "../../generated/prisma/enums.js";
+import { catchAsync } from "../utils/catchAsync.js";
+import { AppError } from "../utils/AppError.js";
 import httpStatus from "http-status";
-import { jwtUtils } from "../utils/jwt";
-import config from "../config";
-import { prisma } from "../lib/prisma";
+import { jwtUtils } from "../utils/jwt.js";
+import config from "../config/index.js";
+import { prisma } from "../lib/prisma.js";
 
 export interface RequestUser {
   userId: string;

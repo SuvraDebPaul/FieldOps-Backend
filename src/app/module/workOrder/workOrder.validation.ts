@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { WorkOrderStatus } from "../../../generated/prisma/enums";
+import { WorkOrderStatus } from "../../../generated/prisma/enums.js";
 
 export const ApproveServiceRequestValidationZodSchema = z.object({
   technicianId: z.uuid("A valid technician is required"),

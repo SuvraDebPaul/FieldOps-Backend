@@ -1,5 +1,5 @@
-import { prisma } from "./app/lib/prisma";
-import { seedDatabase } from "./app/utils/seed";
+import { prisma } from "./app/lib/prisma.js";
+import { seedDatabase } from "./app/utils/seed.js";
 
 const main = async () => {
   try {

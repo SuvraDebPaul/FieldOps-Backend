@@ -1,8 +1,8 @@
 import type { Request, Response } from "express";
 import httpStatus from "http-status";
-import { catchAsync } from "../../utils/catchAsync";
-import { sendResponse } from "../../utils/sendResponse";
-import { InvoiceServices } from "./invoice.service";
+import { catchAsync } from "../../utils/catchAsync.js";
+import { sendResponse } from "../../utils/sendResponse.js";
+import { InvoiceServices } from "./invoice.service.js";
 
 const generateInvoice = catchAsync(async (req: Request, res: Response) => {
   const workOrderId = req.params.workOrderId as string;

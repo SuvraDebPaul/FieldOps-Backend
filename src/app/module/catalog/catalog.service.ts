@@ -1,14 +1,14 @@
 import httpStatus from "http-status";
-import type { ServiceCategoryWhereInput } from "../../../generated/prisma/models";
-import type { IQuery } from "../../interfaces";
-import { prisma } from "../../lib/prisma";
-import { AppError } from "../../utils/AppError";
-import { buildMeta, calculatePagination } from "../../utils/paginate";
+import type { ServiceCategoryWhereInput } from "../../../generated/prisma/models.js";
+import type { IQuery } from "../../interfaces/index.js";
+import { prisma } from "../../lib/prisma.js";
+import { AppError } from "../../utils/AppError.js";
+import { buildMeta, calculatePagination } from "../../utils/paginate.js";
 import type {
   ICreateServiceCategoryPayload,
   ICreateSkillPayload,
   IUpdateServiceCategoryPayload,
-} from "./catalog.interface";
+} from "./catalog.interface.js";
 
 const getAllServiceCategories = async (query: IQuery) => {
   const { page, limit, skip, sortBy, sortOrder } = calculatePagination(

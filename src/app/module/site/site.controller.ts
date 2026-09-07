@@ -1,8 +1,8 @@
 import type { Request, Response } from "express";
 import httpStatus from "http-status";
-import { catchAsync } from "../../utils/catchAsync";
-import { sendResponse } from "../../utils/sendResponse";
-import { SiteServices } from "./site.service";
+import { catchAsync } from "../../utils/catchAsync.js";
+import { sendResponse } from "../../utils/sendResponse.js";
+import { SiteServices } from "./site.service.js";
 
 const createSite = catchAsync(async (req: Request, res: Response) => {
   const result = await SiteServices.createSite(req.body, req.user!);

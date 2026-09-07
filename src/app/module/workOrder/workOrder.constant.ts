@@ -1,4 +1,4 @@
-import { Role, WorkOrderStatus } from "../../../generated/prisma/enums";
+import { Role, WorkOrderStatus } from "../../../generated/prisma/enums.js";
 
 export const WORK_ORDER_TRANSITIONS: Record<
   WorkOrderStatus,

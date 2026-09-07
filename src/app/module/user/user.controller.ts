@@ -1,8 +1,8 @@
 import type { Request, Response } from "express";
 import httpStatus from "http-status";
-import { catchAsync } from "../../utils/catchAsync";
-import { sendResponse } from "../../utils/sendResponse";
-import { UserService } from "./user.service";
+import { catchAsync } from "../../utils/catchAsync.js";
+import { sendResponse } from "../../utils/sendResponse.js";
+import { UserService } from "./user.service.js";
 
 const getMe = catchAsync(async (req: Request, res: Response) => {
   const result = await UserService.getMe(req.user!);

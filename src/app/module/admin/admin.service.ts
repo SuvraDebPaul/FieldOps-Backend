@@ -1,16 +1,16 @@
 import httpStatus from "http-status";
-import { Role, UserStatus } from "../../../generated/prisma/enums";
-import type { UserWhereInput } from "../../../generated/prisma/models";
-import type { IQuery } from "../../interfaces";
-import { prisma } from "../../lib/prisma";
-import type { RequestUser } from "../../middleware/checkAuth";
-import { AppError } from "../../utils/AppError";
-import { writeAuditLog } from "../../utils/auditLogger";
-import { buildMeta, calculatePagination } from "../../utils/paginate";
+import { Role, UserStatus } from "../../../generated/prisma/enums.js";
+import type { UserWhereInput } from "../../../generated/prisma/models.js";
+import type { IQuery } from "../../interfaces/index.js";
+import { prisma } from "../../lib/prisma.js";
+import type { RequestUser } from "../../middleware/checkAuth.js";
+import { AppError } from "../../utils/AppError.js";
+import { writeAuditLog } from "../../utils/auditLogger.js";
+import { buildMeta, calculatePagination } from "../../utils/paginate.js";
 import type {
   IUpdateUserRolePayload,
   IUpdateUserStatusPayload,
-} from "./admin.interface";
+} from "./admin.interface.js";
 
 const getAllUsers = async (query: IQuery) => {
   const { page, limit, skip, sortBy, sortOrder } = calculatePagination(query);

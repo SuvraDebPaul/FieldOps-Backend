@@ -1,10 +1,10 @@
 import httpStatus from "http-status";
-import { RequestUser } from "../../middleware/checkAuth";
-import { prisma } from "../../lib/prisma";
-import { AppError } from "../../utils/AppError";
-import { deleteFromCloudinary, uploadToCloudinary } from "../../lib/cloudinary";
-import { Role } from "../../../generated/prisma/enums";
-import { IUpdateUserPayload } from "./user.interface";
+import { RequestUser } from "../../middleware/checkAuth.js";
+import { prisma } from "../../lib/prisma.js";
+import { AppError } from "../../utils/AppError.js";
+import { deleteFromCloudinary, uploadToCloudinary } from "../../lib/cloudinary.js";
+import { Role } from "../../../generated/prisma/enums.js";
+import { IUpdateUserPayload } from "./user.interface.js";
 
 const getMe = async (user: RequestUser) => {
   const profile = await prisma.user.findUnique({

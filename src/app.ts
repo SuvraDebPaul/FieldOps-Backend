@@ -7,13 +7,13 @@ import express, {
   type Response,
 } from "express";
 import httpStatus from "http-status";
-import { sendResponse } from "./app/utils/sendResponse";
-import { notFound } from "./app/middleware/notFound";
-import { globalErrorHandeler } from "./app/middleware/globalErrorHandler";
-import config from "./app/config";
-import { apiLimiter } from "./app/middleware/rateLimiter";
-import router from "./app/routes";
-import { PaymentController } from "./app/module/payment/payment.controller";
+import { sendResponse } from "./app/utils/sendResponse.js";
+import { notFound } from "./app/middleware/notFound.js";
+import { globalErrorHandeler } from "./app/middleware/globalErrorHandler.js";
+import config from "./app/config/index.js";
+import { apiLimiter } from "./app/middleware/rateLimiter.js";
+import router from "./app/routes/index.js";
+import { PaymentController } from "./app/module/payment/payment.controller.js";
 
 const app: Application = express();
 

@@ -1,8 +1,8 @@
 import type { Request, Response } from "express";
 import httpStatus from "http-status";
-import { catchAsync } from "../../utils/catchAsync";
-import { sendResponse } from "../../utils/sendResponse";
-import { FeedbackServices } from "./feedback.service";
+import { catchAsync } from "../../utils/catchAsync.js";
+import { sendResponse } from "../../utils/sendResponse.js";
+import { FeedbackServices } from "./feedback.service.js";
 
 const submitFeedback = catchAsync(async (req: Request, res: Response) => {
   const workOrderId = req.params.workOrderId as string;

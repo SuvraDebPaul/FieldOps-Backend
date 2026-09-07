@@ -1,17 +1,17 @@
 import { Router } from "express";
-import { Role } from "../../../generated/prisma/enums";
-import { auth } from "../../middleware/checkAuth";
-import { validateRequest } from "../../middleware/validateRequest";
-import { WorkOrderController } from "../workOrder/workOrder.controller";
+import { Role } from "../../../generated/prisma/enums.js";
+import { auth } from "../../middleware/checkAuth.js";
+import { validateRequest } from "../../middleware/validateRequest.js";
+import { WorkOrderController } from "../workOrder/workOrder.controller.js";
 import {
   ApproveServiceRequestValidationZodSchema,
   RejectServiceRequestValidationZodSchema,
-} from "../workOrder/workOrder.validation";
-import { ServiceRequestController } from "./request.controller";
+} from "../workOrder/workOrder.validation.js";
+import { ServiceRequestController } from "./request.controller.js";
 import {
   CreateServiceRequestValidationZodSchema,
   UpdateServiceRequestValidationZodSchema,
-} from "./request.validation";
+} from "./request.validation.js";
 
 const router = Router();
 

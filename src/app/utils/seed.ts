@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
-import config from "../config";
-import { prisma } from "../lib/prisma";
-import { AuthProvider, Role, UserStatus } from "../../generated/prisma/enums";
+import config from "../config/index.js";
+import { prisma } from "../lib/prisma.js";
+import { AuthProvider, Role, UserStatus } from "../../generated/prisma/enums.js";
 
 export const seedDatabase = async () => {
   try {

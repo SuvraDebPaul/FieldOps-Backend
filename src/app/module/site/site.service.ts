@@ -1,12 +1,12 @@
 import httpStatus from "http-status";
-import { Role } from "../../../generated/prisma/enums";
-import type { SiteWhereInput } from "../../../generated/prisma/models";
-import type { IQuery } from "../../interfaces";
-import { prisma } from "../../lib/prisma";
-import type { RequestUser } from "../../middleware/checkAuth";
-import { AppError } from "../../utils/AppError";
-import { buildMeta, calculatePagination } from "../../utils/paginate";
-import type { ICreateSitePayload, IUpdateSitePayload } from "./site.interface";
+import { Role } from "../../../generated/prisma/enums.js";
+import type { SiteWhereInput } from "../../../generated/prisma/models.js";
+import type { IQuery } from "../../interfaces/index.js";
+import { prisma } from "../../lib/prisma.js";
+import type { RequestUser } from "../../middleware/checkAuth.js";
+import { AppError } from "../../utils/AppError.js";
+import { buildMeta, calculatePagination } from "../../utils/paginate.js";
+import type { ICreateSitePayload, IUpdateSitePayload } from "./site.interface.js";
 
 const getCustomerProfileOrThrow = async (userId: string) => {
   const customer = await prisma.customerProfile.findUnique({

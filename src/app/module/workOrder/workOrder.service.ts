@@ -3,28 +3,28 @@ import {
   RequestStatus,
   Role,
   WorkOrderStatus,
-} from "../../../generated/prisma/enums";
-import type { WorkOrderWhereInput } from "../../../generated/prisma/models";
-import type { IQuery } from "../../interfaces";
-import { prisma } from "../../lib/prisma";
-import { SERIALIZABLE_TX } from "../../lib/transaction";
-import type { RequestUser } from "../../middleware/checkAuth";
-import { AppError } from "../../utils/AppError";
-import { writeAuditLog } from "../../utils/auditLogger";
-import { generateWorkOrderCode } from "../../utils/codeGenerator";
-import { buildMeta, calculatePagination } from "../../utils/paginate";
+} from "../../../generated/prisma/enums.js";
+import type { WorkOrderWhereInput } from "../../../generated/prisma/models.js";
+import type { IQuery } from "../../interfaces/index.js";
+import { prisma } from "../../lib/prisma.js";
+import { SERIALIZABLE_TX } from "../../lib/transaction.js";
+import type { RequestUser } from "../../middleware/checkAuth.js";
+import { AppError } from "../../utils/AppError.js";
+import { writeAuditLog } from "../../utils/auditLogger.js";
+import { generateWorkOrderCode } from "../../utils/codeGenerator.js";
+import { buildMeta, calculatePagination } from "../../utils/paginate.js";
 import {
   ACTIVE_WORK_ORDER_STATUSES,
   WORK_ORDER_TRANSITIONS,
   WORK_ORDER_TRANSITION_ROLES,
-} from "./workOrder.constant";
+} from "./workOrder.constant.js";
 import type {
   IAddPartUsagePayload,
   IApproveServiceRequestPayload,
   IChangeWorkOrderStatusPayload,
   IRejectServiceRequestPayload,
   IRescheduleWorkOrderPayload,
-} from "./workOrder.interface";
+} from "./workOrder.interface.js";
 
 const assertValidWindow = (startISO: string, endISO: string) => {
   const start = new Date(startISO);

@@ -1,13 +1,13 @@
 import { Router } from "express";
-import { Role } from "../../../generated/prisma/enums";
-import { auth } from "../../middleware/checkAuth";
-import { validateRequest } from "../../middleware/validateRequest";
-import { CatalogController } from "./catalog.controller";
+import { Role } from "../../../generated/prisma/enums.js";
+import { auth } from "../../middleware/checkAuth.js";
+import { validateRequest } from "../../middleware/validateRequest.js";
+import { CatalogController } from "./catalog.controller.js";
 import {
   CreateServiceCategoryValidationZodSchema,
   CreateSkillValidationZodSchema,
   UpdateServiceCategoryValidationZodSchema,
-} from "./catalog.validation";
+} from "./catalog.validation.js";
 
 const categoryRouter = Router();
 const skillRouter = Router();

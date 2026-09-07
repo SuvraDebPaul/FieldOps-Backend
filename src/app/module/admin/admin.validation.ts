@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Role, UserStatus } from "../../../generated/prisma/enums";
+import { Role, UserStatus } from "../../../generated/prisma/enums.js";
 
 export const UpdateUserStatusValidationZodSchema = z.object({
   status: z.enum(UserStatus),

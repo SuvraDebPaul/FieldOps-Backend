@@ -1,13 +1,13 @@
 import httpStatus from "http-status";
-import { Role, WorkOrderStatus } from "../../../generated/prisma/enums";
-import type { FeedbackWhereInput } from "../../../generated/prisma/models";
-import type { IQuery } from "../../interfaces";
-import { prisma } from "../../lib/prisma";
-import type { RequestUser } from "../../middleware/checkAuth";
-import { AppError } from "../../utils/AppError";
-import { writeAuditLog } from "../../utils/auditLogger";
-import { buildMeta, calculatePagination } from "../../utils/paginate";
-import type { ISubmitFeedbackPayload } from "./feedback.interface";
+import { Role, WorkOrderStatus } from "../../../generated/prisma/enums.js";
+import type { FeedbackWhereInput } from "../../../generated/prisma/models.js";
+import type { IQuery } from "../../interfaces/index.js";
+import { prisma } from "../../lib/prisma.js";
+import type { RequestUser } from "../../middleware/checkAuth.js";
+import { AppError } from "../../utils/AppError.js";
+import { writeAuditLog } from "../../utils/auditLogger.js";
+import { buildMeta, calculatePagination } from "../../utils/paginate.js";
+import type { ISubmitFeedbackPayload } from "./feedback.interface.js";
 
 const submitFeedback = async (
   workOrderId: string,

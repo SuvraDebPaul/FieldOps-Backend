@@ -1,7 +1,7 @@
 import { OAuth2Client } from "google-auth-library";
-import config from "../config";
+import config from "../config/index.js";
 import httpStatus from "http-status";
-import { AppError } from "../utils/AppError";
+import { AppError } from "../utils/AppError.js";
 
 const client = new OAuth2Client(config.GOOGLE_CLIENT_ID);
 

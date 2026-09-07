@@ -1,18 +1,18 @@
 import { Router } from "express";
-import { AuthRoutes } from "../module/auth/auth.route";
-import { UserRoutes } from "../module/user/user.route";
-import { TechnicianRoutes } from "../module/technician/technician.route";
-import { ServiceRequestRoutes } from "../module/request/request.route";
-import { WorkOrderRoutes } from "../module/workOrder/workOrder.route";
-import { InvoiceRoutes } from "../module/invoice/invoice.route";
-import { PaymentRoutes } from "../module/payment/payment.route";
-import { SiteRoutes } from "../module/site/site.route";
-import { FeedbackRoutes } from "../module/feedback/feedback.route";
-import { AdminRoutes } from "../module/admin/admin.route";
+import { AuthRoutes } from "../module/auth/auth.route.js";
+import { UserRoutes } from "../module/user/user.route.js";
+import { TechnicianRoutes } from "../module/technician/technician.route.js";
+import { ServiceRequestRoutes } from "../module/request/request.route.js";
+import { WorkOrderRoutes } from "../module/workOrder/workOrder.route.js";
+import { InvoiceRoutes } from "../module/invoice/invoice.route.js";
+import { PaymentRoutes } from "../module/payment/payment.route.js";
+import { SiteRoutes } from "../module/site/site.route.js";
+import { FeedbackRoutes } from "../module/feedback/feedback.route.js";
+import { AdminRoutes } from "../module/admin/admin.route.js";
 import {
   ServiceCategoryRoutes,
   SkillRoutes,
-} from "../module/catalog/catalog.route";
+} from "../module/catalog/catalog.route.js";
 
 const router = Router();
 

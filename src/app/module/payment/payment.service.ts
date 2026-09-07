@@ -6,15 +6,15 @@ import {
   PaymentStatus,
   Role,
   WorkOrderStatus,
-} from "../../../generated/prisma/enums";
-import config from "../../config";
-import { prisma } from "../../lib/prisma";
-import { getStripe, getStripeWebhookSecret } from "../../lib/stripe";
-import { SERIALIZABLE_TX } from "../../lib/transaction";
-import type { RequestUser } from "../../middleware/checkAuth";
-import { AppError } from "../../utils/AppError";
-import { writeAuditLog } from "../../utils/auditLogger";
-import type { IInitiatePaymentPayload } from "./payment.interface";
+} from "../../../generated/prisma/enums.js";
+import config from "../../config/index.js";
+import { prisma } from "../../lib/prisma.js";
+import { getStripe, getStripeWebhookSecret } from "../../lib/stripe.js";
+import { SERIALIZABLE_TX } from "../../lib/transaction.js";
+import type { RequestUser } from "../../middleware/checkAuth.js";
+import { AppError } from "../../utils/AppError.js";
+import { writeAuditLog } from "../../utils/auditLogger.js";
+import type { IInitiatePaymentPayload } from "./payment.interface.js";
 
 const initiatePayment = async (
   payload: IInitiatePaymentPayload,

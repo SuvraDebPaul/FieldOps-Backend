@@ -1,14 +1,14 @@
 import { Router } from "express";
-import { validateRequest } from "../../middleware/validateRequest";
-import { authLimiter } from "../../middleware/rateLimiter";
+import { validateRequest } from "../../middleware/validateRequest.js";
+import { authLimiter } from "../../middleware/rateLimiter.js";
 import {
   ChangePasswordValidationZodSchema,
   GoogleLoginValidationZodSchema,
   LoginValidationZodSchema,
   RegisterValidationZodSchema,
-} from "./auth.validation";
-import { AuthController } from "./auth.controller";
-import { auth } from "../../middleware/checkAuth";
+} from "./auth.validation.js";
+import { AuthController } from "./auth.controller.js";
+import { auth } from "../../middleware/checkAuth.js";
 
 const router = Router();
 

@@ -1,4 +1,4 @@
-import { WorkOrderStatus } from "../../../generated/prisma/enums";
+import { WorkOrderStatus } from "../../../generated/prisma/enums.js";
 
 export interface IApproveServiceRequestPayload {
   technicianId: string;

@@ -1,4 +1,4 @@
-import { Priority } from "../../../generated/prisma/enums";
+import { Priority } from "../../../generated/prisma/enums.js";
 
 export interface ICreateServiceRequestPayload {
   siteId: string;

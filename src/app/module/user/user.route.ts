@@ -1,9 +1,9 @@
 import { Router } from "express";
-import { auth } from "../../middleware/checkAuth";
-import { upload } from "../../middleware/upload";
-import { validateRequest } from "../../middleware/validateRequest";
-import { UserController } from "./user.controller";
-import { UpdateUserValidationZodSchema } from "./user.validation";
+import { auth } from "../../middleware/checkAuth.js";
+import { upload } from "../../middleware/upload.js";
+import { validateRequest } from "../../middleware/validateRequest.js";
+import { UserController } from "./user.controller.js";
+import { UpdateUserValidationZodSchema } from "./user.validation.js";
 
 const router = Router();
 
