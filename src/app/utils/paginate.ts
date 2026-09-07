@@ -8,10 +8,6 @@ export type TPaginationOptions = {
   sortOrder: "asc" | "desc";
 };
 
-/**
- * Every list endpoint reads its paging and sorting the same way.
- * `limit` is capped so a client cannot ask for the whole table.
- */
 export const calculatePagination = (
   query: IQuery,
   defaultSortBy = "createdAt",
@@ -28,7 +24,11 @@ export const calculatePagination = (
   };
 };
 
-export const buildMeta = (page: number, limit: number, total: number): IMeta => ({
+export const buildMeta = (
+  page: number,
+  limit: number,
+  total: number,
+): IMeta => ({
   page,
   limit,
   total,

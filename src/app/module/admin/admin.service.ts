@@ -8,226 +8,214 @@ import { AppError } from "../../utils/AppError";
 import { writeAuditLog } from "../../utils/auditLogger";
 import { buildMeta, calculatePagination } from "../../utils/paginate";
 import type {
-	IUpdateUserRolePayload,
-	IUpdateUserStatusPayload,
+  IUpdateUserRolePayload,
+  IUpdateUserStatusPayload,
 } from "./admin.interface";
 
 const getAllUsers = async (query: IQuery) => {
-	const { page, limit, skip, sortBy, sortOrder } = calculatePagination(query);
+  const { page, limit, skip, sortBy, sortOrder } = calculatePagination(query);
 
-	const andConditions: UserWhereInput[] = [];
+  const andConditions: UserWhereInput[] = [];
 
-	if (query.searchTerm) {
-		andConditions.push({
-			OR: [
-				{ name: { contains: query.searchTerm as string, mode: "insensitive" } },
-				{ email: { contains: query.searchTerm as string, mode: "insensitive" } },
-				{ phone: { contains: query.searchTerm as string, mode: "insensitive" } },
-			],
-		});
-	}
+  if (query.searchTerm) {
+    andConditions.push({
+      OR: [
+        { name: { contains: query.searchTerm as string, mode: "insensitive" } },
+        {
+          email: { contains: query.searchTerm as string, mode: "insensitive" },
+        },
+        {
+          phone: { contains: query.searchTerm as string, mode: "insensitive" },
+        },
+      ],
+    });
+  }
 
-	if (query.role) {
-		andConditions.push({ role: query.role as Role });
-	}
+  if (query.role) {
+    andConditions.push({ role: query.role as Role });
+  }
 
-	if (query.status) {
-		andConditions.push({ status: query.status as UserStatus });
-	}
+  if (query.status) {
+    andConditions.push({ status: query.status as UserStatus });
+  }
 
-	andConditions.push({ deletedAt: null });
+  andConditions.push({ deletedAt: null });
 
-	const where: UserWhereInput = { AND: andConditions };
+  const where: UserWhereInput = { AND: andConditions };
 
-	const [data, total] = await Promise.all([
-		prisma.user.findMany({
-			where,
-			take: limit,
-			skip,
-			orderBy: { [sortBy]: sortOrder },
-			omit: { password: true },
-			include: {
-				customer: true,
-				technician: { include: { skills: { include: { skill: true } } } },
-			},
-		}),
+  const [data, total] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      take: limit,
+      skip,
+      orderBy: { [sortBy]: sortOrder },
+      omit: { password: true },
+      include: {
+        customer: true,
+        technician: { include: { skills: { include: { skill: true } } } },
+      },
+    }),
 
-		prisma.user.count({ where }),
-	]);
+    prisma.user.count({ where }),
+  ]);
 
-	return { data, meta: buildMeta(page, limit, total) };
+  return { data, meta: buildMeta(page, limit, total) };
 };
 
 const getSingleUser = async (userId: string) => {
-	const user = await prisma.user.findFirst({
-		where: { id: userId, deletedAt: null },
-		omit: { password: true },
-		include: {
-			customer: { include: { sites: true } },
-			technician: { include: { skills: { include: { skill: true } } } },
-		},
-	});
+  const user = await prisma.user.findFirst({
+    where: { id: userId, deletedAt: null },
+    omit: { password: true },
+    include: {
+      customer: { include: { sites: true } },
+      technician: { include: { skills: { include: { skill: true } } } },
+    },
+  });
 
-	if (!user) {
-		throw new AppError(httpStatus.NOT_FOUND, "User Not Found");
-	}
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User Not Found");
+  }
 
-	return user;
+  return user;
 };
 
-/**
- * Suspend or reactivate an account.
- *
- * checkAuth re-reads the user on every request, so a suspension takes effect on
- * the account's very next call rather than when its access token expires. All
- * refresh tokens are revoked at the same time, so the session cannot be renewed.
- */
 const updateUserStatus = async (
-	userId: string,
-	payload: IUpdateUserStatusPayload,
-	actor: RequestUser,
+  userId: string,
+  payload: IUpdateUserStatusPayload,
+  actor: RequestUser,
 ) => {
-	// An admin locking themselves out would need database access to recover.
-	if (userId === actor.userId) {
-		throw new AppError(
-			httpStatus.BAD_REQUEST,
-			"You Cannot Change Your Own Account Status",
-		);
-	}
+  if (userId === actor.userId) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "You Cannot Change Your Own Account Status",
+    );
+  }
 
-	const user = await prisma.user.findFirst({
-		where: { id: userId, deletedAt: null },
-	});
+  const user = await prisma.user.findFirst({
+    where: { id: userId, deletedAt: null },
+  });
 
-	if (!user) {
-		throw new AppError(httpStatus.NOT_FOUND, "User Not Found");
-	}
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User Not Found");
+  }
 
-	if (user.status === payload.status) {
-		throw new AppError(
-			httpStatus.BAD_REQUEST,
-			`This Account Is Already ${payload.status}`,
-		);
-	}
+  if (user.status === payload.status) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      `This Account Is Already ${payload.status}`,
+    );
+  }
 
-	const updated = await prisma.$transaction(async (tx) => {
-		const result = await tx.user.update({
-			where: { id: userId },
-			data: { status: payload.status },
-			omit: { password: true },
-		});
+  const updated = await prisma.$transaction(async (tx) => {
+    const result = await tx.user.update({
+      where: { id: userId },
+      data: { status: payload.status },
+      omit: { password: true },
+    });
 
-		if (payload.status === UserStatus.SUSPENDED) {
-			await tx.refreshToken.updateMany({
-				where: { userId, revokedAt: null },
-				data: { revokedAt: new Date() },
-			});
-		}
+    if (payload.status === UserStatus.SUSPENDED) {
+      await tx.refreshToken.updateMany({
+        where: { userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+    }
 
-		await writeAuditLog(
-			{
-				actorId: actor.userId,
-				action:
-					payload.status === UserStatus.SUSPENDED
-						? "USER_SUSPENDED"
-						: "USER_REACTIVATED",
-				entity: "User",
-				entityId: userId,
-				before: { status: user.status },
-				after: { status: payload.status, reason: payload.reason ?? null },
-			},
-			tx,
-		);
+    await writeAuditLog(
+      {
+        actorId: actor.userId,
+        action:
+          payload.status === UserStatus.SUSPENDED
+            ? "USER_SUSPENDED"
+            : "USER_REACTIVATED",
+        entity: "User",
+        entityId: userId,
+        before: { status: user.status },
+        after: { status: payload.status, reason: payload.reason ?? null },
+      },
+      tx,
+    );
 
-		return result;
-	});
+    return result;
+  });
 
-	return updated;
+  return updated;
 };
 
-/**
- * Change a user's role.
- *
- * Refused when the target already holds a profile that the new role would
- * orphan — a CUSTOMER with open requests should not silently become a
- * TECHNICIAN with no technician profile.
- */
 const updateUserRole = async (
-	userId: string,
-	payload: IUpdateUserRolePayload,
-	actor: RequestUser,
+  userId: string,
+  payload: IUpdateUserRolePayload,
+  actor: RequestUser,
 ) => {
-	if (userId === actor.userId) {
-		throw new AppError(
-			httpStatus.BAD_REQUEST,
-			"You Cannot Change Your Own Role",
-		);
-	}
+  if (userId === actor.userId) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "You Cannot Change Your Own Role",
+    );
+  }
 
-	const user = await prisma.user.findFirst({
-		where: { id: userId, deletedAt: null },
-		include: { customer: true, technician: true },
-	});
+  const user = await prisma.user.findFirst({
+    where: { id: userId, deletedAt: null },
+    include: { customer: true, technician: true },
+  });
 
-	if (!user) {
-		throw new AppError(httpStatus.NOT_FOUND, "User Not Found");
-	}
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User Not Found");
+  }
 
-	if (user.role === payload.role) {
-		throw new AppError(
-			httpStatus.BAD_REQUEST,
-			`This User Is Already ${payload.role}`,
-		);
-	}
+  if (user.role === payload.role) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      `This User Is Already ${payload.role}`,
+    );
+  }
 
-	if (payload.role === Role.TECHNICIAN && !user.technician) {
-		throw new AppError(
-			httpStatus.BAD_REQUEST,
-			"This User Has No Technician Profile, So They Cannot Be Made A Technician",
-		);
-	}
+  if (payload.role === Role.TECHNICIAN && !user.technician) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "This User Has No Technician Profile, So They Cannot Be Made A Technician",
+    );
+  }
 
-	if (payload.role === Role.CUSTOMER && !user.customer) {
-		throw new AppError(
-			httpStatus.BAD_REQUEST,
-			"This User Has No Customer Profile, So They Cannot Be Made A Customer",
-		);
-	}
+  if (payload.role === Role.CUSTOMER && !user.customer) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "This User Has No Customer Profile, So They Cannot Be Made A Customer",
+    );
+  }
 
-	const updated = await prisma.$transaction(async (tx) => {
-		const result = await tx.user.update({
-			where: { id: userId },
-			data: { role: payload.role },
-			omit: { password: true },
-		});
+  const updated = await prisma.$transaction(async (tx) => {
+    const result = await tx.user.update({
+      where: { id: userId },
+      data: { role: payload.role },
+      omit: { password: true },
+    });
 
-		// The old role is baked into any live access token; force a fresh login.
-		await tx.refreshToken.updateMany({
-			where: { userId, revokedAt: null },
-			data: { revokedAt: new Date() },
-		});
+    await tx.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
 
-		await writeAuditLog(
-			{
-				actorId: actor.userId,
-				action: "USER_ROLE_CHANGED",
-				entity: "User",
-				entityId: userId,
-				before: { role: user.role },
-				after: { role: payload.role },
-			},
-			tx,
-		);
+    await writeAuditLog(
+      {
+        actorId: actor.userId,
+        action: "USER_ROLE_CHANGED",
+        entity: "User",
+        entityId: userId,
+        before: { role: user.role },
+        after: { role: payload.role },
+      },
+      tx,
+    );
 
-		return result;
-	});
+    return result;
+  });
 
-	return updated;
+  return updated;
 };
 
 export const AdminServices = {
-	getAllUsers,
-	getSingleUser,
-	updateUserStatus,
-	updateUserRole,
+  getAllUsers,
+  getSingleUser,
+  updateUserStatus,
+  updateUserRole,
 };

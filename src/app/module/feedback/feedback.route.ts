@@ -6,9 +6,9 @@ import { FeedbackController } from "./feedback.controller";
 const router = Router();
 
 router.get(
-	"/",
-	auth(Role.ADMIN, Role.CUSTOMER, Role.TECHNICIAN),
-	FeedbackController.getAllFeedbacks,
+  "/",
+  auth(Role.ADMIN, Role.CUSTOMER, Role.TECHNICIAN),
+  FeedbackController.getAllFeedbacks,
 );
 
 export const FeedbackRoutes = router;

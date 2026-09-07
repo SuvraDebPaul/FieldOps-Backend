@@ -5,7 +5,6 @@ export interface IQuery {
   sortBy?: string;
   sortOrder?: string;
 
-  // Module-specific filters (status, priority, categoryId, from, to, ...)
   [key: string]: unknown;
 }
 

@@ -22,9 +22,6 @@ app.use(helmet());
 app.use(cors({ origin: config.FRONTEND_URL, credentials: true }));
 app.use(apiLimiter);
 
-// Stripe signs the RAW bytes of the request body. This route must therefore be
-// mounted with express.raw() BEFORE express.json(), or the signature check
-// fails on a body that has been parsed and re-serialised.
 app.post(
   "/api/v1/payments/webhook",
   express.raw({ type: "application/json" }),

@@ -1,3 +1,3 @@
 export interface IInitiatePaymentPayload {
-	invoiceId: string;
+  invoiceId: string;
 }

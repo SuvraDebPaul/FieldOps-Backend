@@ -8,20 +8,16 @@ import { InitiatePaymentValidationZodSchema } from "./payment.validation";
 const router = Router();
 
 router.post(
-	"/initiate",
-	auth(Role.CUSTOMER, Role.ADMIN),
-	validateRequest(InitiatePaymentValidationZodSchema),
-	PaymentController.initiatePayment,
+  "/initiate",
+  auth(Role.CUSTOMER, Role.ADMIN),
+  validateRequest(InitiatePaymentValidationZodSchema),
+  PaymentController.initiatePayment,
 );
 
 router.get(
-	"/:transactionId",
-	auth(Role.ADMIN, Role.CUSTOMER),
-	PaymentController.getPaymentByTransactionId,
+  "/:transactionId",
+  auth(Role.ADMIN, Role.CUSTOMER),
+  PaymentController.getPaymentByTransactionId,
 );
-
-// NOTE: POST /api/v1/payments/webhook is NOT registered here. It is mounted
-// directly in app.ts ahead of express.json(), because Stripe signature
-// verification needs the raw request body.
 
 export const PaymentRoutes = router;

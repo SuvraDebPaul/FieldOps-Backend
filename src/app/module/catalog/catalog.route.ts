@@ -4,46 +4,45 @@ import { auth } from "../../middleware/checkAuth";
 import { validateRequest } from "../../middleware/validateRequest";
 import { CatalogController } from "./catalog.controller";
 import {
-	CreateServiceCategoryValidationZodSchema,
-	CreateSkillValidationZodSchema,
-	UpdateServiceCategoryValidationZodSchema,
+  CreateServiceCategoryValidationZodSchema,
+  CreateSkillValidationZodSchema,
+  UpdateServiceCategoryValidationZodSchema,
 } from "./catalog.validation";
 
 const categoryRouter = Router();
 const skillRouter = Router();
 
-// Public: a customer must be able to browse categories before raising a request.
 categoryRouter.get("/", CatalogController.getAllServiceCategories);
 
 categoryRouter.get("/:categoryId", CatalogController.getSingleServiceCategory);
 
 categoryRouter.post(
-	"/",
-	auth(Role.ADMIN),
-	validateRequest(CreateServiceCategoryValidationZodSchema),
-	CatalogController.createServiceCategory,
+  "/",
+  auth(Role.ADMIN),
+  validateRequest(CreateServiceCategoryValidationZodSchema),
+  CatalogController.createServiceCategory,
 );
 
 categoryRouter.patch(
-	"/:categoryId",
-	auth(Role.ADMIN),
-	validateRequest(UpdateServiceCategoryValidationZodSchema),
-	CatalogController.updateServiceCategory,
+  "/:categoryId",
+  auth(Role.ADMIN),
+  validateRequest(UpdateServiceCategoryValidationZodSchema),
+  CatalogController.updateServiceCategory,
 );
 
 categoryRouter.delete(
-	"/:categoryId",
-	auth(Role.ADMIN),
-	CatalogController.softDeleteServiceCategory,
+  "/:categoryId",
+  auth(Role.ADMIN),
+  CatalogController.softDeleteServiceCategory,
 );
 
 skillRouter.get("/", CatalogController.getAllSkills);
 
 skillRouter.post(
-	"/",
-	auth(Role.ADMIN),
-	validateRequest(CreateSkillValidationZodSchema),
-	CatalogController.createSkill,
+  "/",
+  auth(Role.ADMIN),
+  validateRequest(CreateSkillValidationZodSchema),
+  CatalogController.createSkill,
 );
 
 export const ServiceCategoryRoutes = categoryRouter;

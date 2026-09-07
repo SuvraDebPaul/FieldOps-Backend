@@ -5,23 +5,20 @@ import { AuthProvider, Role, UserStatus } from "../../generated/prisma/enums";
 
 export const seedDatabase = async () => {
   try {
-    // ⚡ Fast check: if admin already exists, skip entire seeding
     const existingAdmin = await prisma.user.findFirst({
       where: { email: "admin@gmail.com", role: Role.ADMIN },
     });
     if (existingAdmin) {
-      // Database already seeded, exit immediately
       return;
     }
 
-    console.log("🌱 Checking database seed...");
+    console.log("Checking database seed...");
 
     const defaultPasswordHash = await bcrypt.hash(
       "Admin@12345",
       config.BCRYPT_SALT_ROUNDS,
     );
 
-    // 1. Super Admin
     await prisma.user.upsert({
       where: { email: "admin@gmail.com" },
       update: {},
@@ -35,7 +32,6 @@ export const seedDatabase = async () => {
       },
     });
 
-    // 2. Skills
     const skillsData = [
       { name: "Electrical Systems" },
       { name: "HVAC & Cooling" },
@@ -55,7 +51,6 @@ export const seedDatabase = async () => {
       createdSkills[skill.name] = record.id;
     }
 
-    // 3. Technicians (4)
     const technicians = [
       {
         email: "tech.rahim@gmail.com",
@@ -142,7 +137,6 @@ export const seedDatabase = async () => {
       }
     }
 
-    // 4. Customers (3) with Sites
     const customers = [
       {
         email: "corp1@apextextiles.com",
@@ -247,7 +241,6 @@ export const seedDatabase = async () => {
       }
     }
 
-    // 5. 8 Service Categories
     const categories = [
       {
         name: "Central HVAC Overhaul",

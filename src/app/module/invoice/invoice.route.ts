@@ -6,15 +6,15 @@ import { InvoiceController } from "./invoice.controller";
 const router = Router();
 
 router.get(
-	"/",
-	auth(Role.ADMIN, Role.CUSTOMER, Role.TECHNICIAN),
-	InvoiceController.getAllInvoices,
+  "/",
+  auth(Role.ADMIN, Role.CUSTOMER, Role.TECHNICIAN),
+  InvoiceController.getAllInvoices,
 );
 
 router.get(
-	"/:invoiceId",
-	auth(Role.ADMIN, Role.CUSTOMER, Role.TECHNICIAN),
-	InvoiceController.getSingleInvoice,
+  "/:invoiceId",
+  auth(Role.ADMIN, Role.CUSTOMER, Role.TECHNICIAN),
+  InvoiceController.getSingleInvoice,
 );
 
 export const InvoiceRoutes = router;

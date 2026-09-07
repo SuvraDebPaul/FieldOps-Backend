@@ -12,7 +12,6 @@ export const apiLimiter = rateLimit({
   },
 });
 
-// Login/register are brute-forceable — much tighter budget. Used in Day 2.
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 20,
