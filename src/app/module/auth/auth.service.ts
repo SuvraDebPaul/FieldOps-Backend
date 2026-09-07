@@ -209,7 +209,7 @@ const refreshToken = async (token: string | undefined) => {
   if (!token) {
     throw new AppError(httpStatus.UNAUTHORIZED, "No refresh token provided");
   }
-  const verified = jwtUtils.verifyToken(token, config.JWT_ACCESS_SECRET);
+  const verified = jwtUtils.verifyToken(token, config.JWT_REFRESH_SECRET);
 
   if (!verified.success) {
     throw new AppError(

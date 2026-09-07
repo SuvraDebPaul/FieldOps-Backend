@@ -1,0 +1,3660 @@
+{
+  "info": {
+    "name": "FieldOps - Field Service Management API",
+    "description": "B7A6 Assignment 7 - Field Service Management (student ID last digit 7).\n\nHOW TO RUN\n\n1. Select the 'FieldOps - Live' environment (or leave baseUrl as-is; it points at production).\n\n2. Open the collection menu and choose Run collection.\n\n3. Everything passes without typing a single value. Tokens and ids are captured automatically, and the customer registered at the start uses a unique email each run, so the collection can be replayed as often as you like.\n\nTWO REQUESTS NEED A HUMAN, and are marked MANUAL STEP in their description:\n\n- 01 Auth > Google social login (needs an id_token from a browser sign-in)\n\n- 04 Profile > Upload avatar (needs a file)\n\nONE STEP NEEDS A BROWSER: in 10 Payment, open the checkoutUrl returned by 'Initiate a Stripe payment' and pay with test card 4242 4242 4242 4242 (any future expiry, any CVC). The requests after it - payment status, and all of 11 Feedback - depend on that payment having settled.\n\nTHE SERVICE FLOW\n\nA customer raises a service request against one of their sites -> a dispatcher approves it and assigns a skill-matched technician into a conflict-free slot -> the technician runs the job through a guarded status workflow and logs the parts used -> the system generates an invoice from the hours actually worked -> the customer pays through Stripe -> a signature-verified webhook confirms the payment -> the customer rates the job.\n\nDEMO ACCOUNTS (password Admin@12345 for all)\n\n  admin@gmail.com          ADMIN\n\n  tech.salam@gmail.com     TECHNICIAN (hydraulics - takes the job in this run)\n\n  tech.karim@gmail.com     TECHNICIAN (HVAC - used for the wrong-skill and ownership demos)\n\n  corp1@apextextiles.com   CUSTOMER (a different company, for the ownership demos)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://field-ops-backend-sdp.vercel.app"
+    },
+    {
+      "key": "runEmail",
+      "value": ""
+    },
+    {
+      "key": "runStamp",
+      "value": ""
+    },
+    {
+      "key": "adminToken",
+      "value": ""
+    },
+    {
+      "key": "customerToken",
+      "value": ""
+    },
+    {
+      "key": "technicianToken",
+      "value": ""
+    },
+    {
+      "key": "customerToken2",
+      "value": ""
+    },
+    {
+      "key": "technicianToken2",
+      "value": ""
+    },
+    {
+      "key": "badToken",
+      "value": ""
+    },
+    {
+      "key": "categoryId",
+      "value": ""
+    },
+    {
+      "key": "categoryName",
+      "value": ""
+    },
+    {
+      "key": "newCategoryId",
+      "value": ""
+    },
+    {
+      "key": "skillId",
+      "value": ""
+    },
+    {
+      "key": "technicianId",
+      "value": ""
+    },
+    {
+      "key": "technicianIdWrongSkill",
+      "value": ""
+    },
+    {
+      "key": "siteId",
+      "value": ""
+    },
+    {
+      "key": "customerSiteTotal",
+      "value": ""
+    },
+    {
+      "key": "requestId",
+      "value": ""
+    },
+    {
+      "key": "requestIdConflict",
+      "value": ""
+    },
+    {
+      "key": "requestIdSpare",
+      "value": ""
+    },
+    {
+      "key": "workOrderId",
+      "value": ""
+    },
+    {
+      "key": "invoiceId",
+      "value": ""
+    },
+    {
+      "key": "transactionId",
+      "value": ""
+    },
+    {
+      "key": "checkoutUrl",
+      "value": ""
+    },
+    {
+      "key": "targetUserId",
+      "value": ""
+    },
+    {
+      "key": "adminUserId",
+      "value": ""
+    },
+    {
+      "key": "slotStart",
+      "value": ""
+    },
+    {
+      "key": "slotEnd",
+      "value": ""
+    },
+    {
+      "key": "slotOverlapStart",
+      "value": ""
+    },
+    {
+      "key": "slotOverlapEnd",
+      "value": ""
+    },
+    {
+      "key": "slotRescheduleStart",
+      "value": ""
+    },
+    {
+      "key": "slotRescheduleEnd",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "00 Health",
+      "item": [
+        {
+          "name": "Root",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api",
+              "host": ["{{baseUrl}}"],
+              "path": ["api"]
+            },
+            "description": "Unauthenticated liveness check."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Unauthenticated liveness check."
+    },
+    {
+      "name": "01 Auth",
+      "item": [
+        {
+          "name": "Register a new customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "register"]
+            },
+            "description": "Self-registration always creates a CUSTOMER. `role` is never read from the request body, so sending one has no effect - a customer cannot make themselves an admin.\n\nThe email is generated per run, so this collection can be replayed without hitting the unique constraint on User.email.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Meghna Cement Mills\",\n  \"email\": \"{{runEmail}}\",\n  \"password\": \"Meghna@1234\",\n  \"phone\": \"+8801711445566\",\n  \"companyName\": \"Meghna Cement Mills Ltd\",\n  \"billingAddr\": \"Mongla EPZ, Bagerhat\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Unique email per run so the collection is replayable.",
+                  "const stamp = Date.now();",
+                  "pm.collectionVariables.set(\"runEmail\", `demo.reviewer.${stamp}@meghnacement.com`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"password never leaks\", () => {",
+                  "  pm.expect(pm.response.text()).to.not.include(\"\\\"password\\\"\");",
+                  "});",
+                  "const d = pm.response.json().data;",
+                  "pm.test(\"role forced to CUSTOMER\", () => pm.expect(d.role).to.eql(\"CUSTOMER\"));",
+                  "pm.test(\"customer profile created\", () => pm.expect(d.customer).to.be.an(\"object\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login - new customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "Captures {{customerToken}}. This is the customer used for the whole service flow.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{runEmail}}\",\n  \"password\": \"Meghna@1234\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "if (d && d.accessToken) pm.collectionVariables.set(\"customerToken\", d.accessToken);",
+                  "if (d && d.refreshToken) pm.collectionVariables.set(\"customerTokenRefresh\", d.refreshToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login - ADMIN (demo account)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "The demo admin credentials from the submission form. Captures {{adminToken}}.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@gmail.com\",\n  \"password\": \"Admin@12345\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "if (d && d.accessToken) pm.collectionVariables.set(\"adminToken\", d.accessToken);",
+                  "if (d && d.refreshToken) pm.collectionVariables.set(\"adminTokenRefresh\", d.refreshToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login - TECHNICIAN (hydraulics)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "TECH-003, skilled in Industrial Plumbing and Hydraulic Systems. Captures {{technicianToken}}; this is the technician the job gets assigned to.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"tech.salam@gmail.com\",\n  \"password\": \"Admin@12345\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "if (d && d.accessToken) pm.collectionVariables.set(\"technicianToken\", d.accessToken);",
+                  "if (d && d.refreshToken) pm.collectionVariables.set(\"technicianTokenRefresh\", d.refreshToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login - second CUSTOMER",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "A different company. Used to prove a customer cannot read another company's data.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"corp1@apextextiles.com\",\n  \"password\": \"Admin@12345\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "if (d && d.accessToken) pm.collectionVariables.set(\"customerToken2\", d.accessToken);",
+                  "if (d && d.refreshToken) pm.collectionVariables.set(\"customerToken2Refresh\", d.refreshToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login - second TECHNICIAN",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "TECH-002, skilled in HVAC and Fire & Safety - deliberately NOT hydraulics. Used for both the wrong-skill rejection and the technician-vs-technician ownership check.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"tech.karim@gmail.com\",\n  \"password\": \"Admin@12345\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "if (d && d.accessToken) pm.collectionVariables.set(\"technicianToken2\", d.accessToken);",
+                  "if (d && d.refreshToken) pm.collectionVariables.set(\"technicianToken2Refresh\", d.refreshToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh token (rotation)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/refresh-token",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "refresh-token"]
+            },
+            "description": "Rotation: the presented refresh token is revoked and a fresh pair issued, so a stolen refresh token works at most once.\n\nThe token is read from the login response above.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{customerTokenRefresh}}\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// nothing to do - the refresh token was captured at login"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Google social login (manual step)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/google",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "google"]
+            },
+            "description": "MANUAL STEP - skipped by the collection runner.\n\nGCP social login. The id_token is obtained in a browser and verified server-side against Google's public keys, including an audience check against GOOGLE_CLIENT_ID, so a token minted for another application cannot be replayed here.\n\nTo try it: open {{baseUrl}}/google-signin.html, sign in with Google, and paste the token that appears into the body above.\n\nAn existing password account with the same email is linked rather than duplicated, and a Google-only account has a null password - which is why the login and change-password endpoints both guard against it.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idToken\": \"PASTE_A_GOOGLE_ID_TOKEN_HERE\"\n}"
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Email/password and Google social login, plus refresh-token rotation. Run this folder first - it captures every role token the rest of the collection uses."
+    },
+    {
+      "name": "02 Catalog",
+      "item": [
+        {
+          "name": "List service categories (public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categories?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "categories"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Public on purpose: a customer has to be able to browse the catalogue before registering.\n\nCaptures the hydraulics category used by the service flow, plus a skill id for the admin create-category request below."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test(\"standard envelope\", () => {",
+                  "  pm.expect(b).to.have.property(\"success\");",
+                  "  pm.expect(b).to.have.property(\"message\");",
+                  "  pm.expect(b).to.have.property(\"data\");",
+                  "});",
+                  "const d = pm.response.json().data;",
+                  "const hyd = d.find(c => c.requiredSkill.name === 'Hydraulic Systems');",
+                  "if (hyd) {",
+                  "  pm.collectionVariables.set('categoryId', hyd.id);",
+                  "  pm.collectionVariables.set('categoryName', hyd.name);",
+                  "}",
+                  "if (d.length) pm.collectionVariables.set('skillId', d[0].requiredSkillId);",
+                  "pm.test('hydraulics category found', () => pm.expect(hyd).to.not.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get one category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categories/{{categoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "categories", "{{categoryId}}"]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categories?searchTerm=hydraulic&page=1&limit=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "categories"],
+              "query": [
+                {
+                  "key": "searchTerm",
+                  "value": "hydraulic"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "Case-insensitive search across name and description."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List skills (public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/skills",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "skills"]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create a category (ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "categories"]
+            },
+            "description": "Admin-only. The name carries a run stamp so the collection stays replayable against the unique constraint on ServiceCategory.name.\n\nCaptures {{newCategoryId}} so the update and delete below act on this row, leaving the hydraulics category the service flow depends on untouched.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Switchgear Thermal Imaging {{runStamp}}\",\n  \"description\": \"Infrared survey of LV/HV switchgear under load.\",\n  \"requiredSkillId\": \"{{skillId}}\",\n  \"baseCharge\": 180,\n  \"estimatedMins\": 120\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"runStamp\", String(Date.now()).slice(-6));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const d = pm.response.json().data;",
+                  "if (d && d.id) pm.collectionVariables.set(\"newCategoryId\", d.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update a category (ADMIN)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categories/{{newCategoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "categories", "{{newCategoryId}}"]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"baseCharge\": 210,\n  \"estimatedMins\": 150\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete a category (ADMIN, soft)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categories/{{newCategoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "categories", "{{newCategoryId}}"]
+            },
+            "description": "Soft delete: sets deletedAt and isActive=false. The row survives so historical service requests still resolve their category. No endpoint in this API performs a hard delete."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create a skill (ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/skills",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "skills"]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Vibration Analysis {{runStamp}}\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "403 - customer tries to create a category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "categories"]
+            },
+            "description": "Role check. Catalogue management is admin-only.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Should Not Exist\",\n  \"requiredSkillId\": \"{{skillId}}\",\n  \"baseCharge\": 10,\n  \"estimatedMins\": 30\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Service categories and skills. Reads are public so a customer can browse before registering; writes are admin-only."
+    },
+    {
+      "name": "03 Technicians",
+      "item": [
+        {
+          "name": "List technicians (public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/technicians?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "technicians"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Captures two technicians: one WITH the Hydraulic Systems skill (who can take the job) and one WITHOUT it (used to demonstrate the skill check rejecting an unqualified assignment)."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "const names = t => (t.skills || []).map(s => s.skill.name);",
+                  "const good = d.find(t => names(t).includes('Hydraulic Systems'));",
+                  "const bad  = d.find(t => !names(t).includes('Hydraulic Systems'));",
+                  "if (good) pm.collectionVariables.set('technicianId', good.id);",
+                  "if (bad)  pm.collectionVariables.set('technicianIdWrongSkill', bad.id);",
+                  "pm.test('a hydraulics technician exists', () => pm.expect(good).to.not.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Filter technicians by city",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/technicians?city=Dhaka&page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "technicians"],
+              "query": [
+                {
+                  "key": "city",
+                  "value": "Dhaka"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Captures a technician with the required skill and one without, for the assignment demos."
+    },
+    {
+      "name": "04 Profile",
+      "item": [
+        {
+          "name": "My profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "me"]
+            },
+            "description": "Any authenticated role."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"password never leaks\", () => {",
+                  "  pm.expect(pm.response.text()).to.not.include(\"\\\"password\\\"\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update my profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "me"]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Meghna Cement Mills Ltd\",\n  \"phone\": \"+8801711445599\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upload avatar (manual step)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/me/avatar",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "me", "avatar"]
+            },
+            "description": "MANUAL STEP - needs a file, so the runner skips it.\n\nmultipart/form-data with a single `file` field. Stored on Cloudinary; the previous image is deleted using its stored public_id, so replacing an avatar does not leak orphaned files.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Self-service profile for any authenticated role."
+    },
+    {
+      "name": "05 Customer sites",
+      "item": [
+        {
+          "name": "Create a site",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sites",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sites"]
+            },
+            "description": "A customer company has many physical sites, and a service request targets one of them. The site contact is the person the technician calls on arrival, which is not the person who signs the purchase order.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"Kiln Line 2 - Hydraulic Room\",\n  \"address\": \"Mongla EPZ, Plot 7, Bagerhat\",\n  \"city\": \"Khulna\",\n  \"contactName\": \"Nazrul Islam\",\n  \"contactPhone\": \"+8801811223344\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const d = pm.response.json().data;",
+                  "if (d && d.id) pm.collectionVariables.set(\"siteId\", d.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List my sites (CUSTOMER)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sites?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sites"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "A customer sees only their own sites. Compare the total with the admin request below."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const m = pm.response.json().meta;",
+                  "pm.collectionVariables.set('customerSiteTotal', m.total);",
+                  "pm.test('newly registered customer owns exactly one site', () => pm.expect(m.total).to.eql(1));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List all sites (ADMIN)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sites?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sites"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Same route, different audience. The scoping happens in the service layer, not the route, which is why one endpoint can safely serve both."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const total = pm.response.json().meta.total;",
+                  "const mine = Number(pm.collectionVariables.get('customerSiteTotal'));",
+                  "pm.test('admin sees more sites than the customer does', () => pm.expect(total).to.be.above(mine));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get one site",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sites/{{siteId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sites", "{{siteId}}"]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update a site",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sites/{{siteId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sites", "{{siteId}}"]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contactPhone\": \"+8801811555666\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "A customer company has many physical sites. Includes a side-by-side comparison of customer-scoped and admin-scoped results on the same route."
+    },
+    {
+      "name": "06 Service requests",
+      "item": [
+        {
+          "name": "Create a service request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/requests",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "requests"]
+            },
+            "description": "The site must belong to the calling customer and the category must be active - a customer cannot raise a request against another company's plant.\n\nThe SR- code comes from a Postgres sequence rather than count()+1, so two concurrent requests can never be handed the same number.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"siteId\": \"{{siteId}}\",\n  \"categoryId\": \"{{categoryId}}\",\n  \"title\": \"Hydraulic press losing pressure mid-cycle\",\n  \"description\": \"Press on kiln line 2 drops from 180 bar to 120 bar during the hold phase. Suspected pump seal or relief valve fault.\",\n  \"priority\": \"HIGH\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const d = pm.response.json().data;",
+                  "if (d && d.id) pm.collectionVariables.set(\"requestId\", d.id);",
+                  "const d = pm.response.json().data;",
+                  "pm.test('sequential SR- code issued', () => pm.expect(d.code).to.match(/^SR-\\d{4}-\\d{6}$/));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create a second request (for the 409 demo)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/requests",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "requests"]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"siteId\": \"{{siteId}}\",\n  \"categoryId\": \"{{categoryId}}\",\n  \"title\": \"Second hydraulic unit - overlapping slot\",\n  \"description\": \"Raised so the double-booking demonstration has a request to approve onto a conflicting time window.\",\n  \"priority\": \"NORMAL\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const d = pm.response.json().data;",
+                  "if (d && d.id) pm.collectionVariables.set(\"requestIdConflict\", d.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create a third request (for cancel / delete)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/requests",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "requests"]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"siteId\": \"{{siteId}}\",\n  \"categoryId\": \"{{categoryId}}\",\n  \"title\": \"Spare request for the cancel and delete demos\",\n  \"description\": \"Kept separate so cancelling and deleting does not consume the request the work-order flow needs.\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const d = pm.response.json().data;",
+                  "if (d && d.id) pm.collectionVariables.set(\"requestIdSpare\", d.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List my requests (CUSTOMER)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/requests?page=1&limit=10&sortBy=createdAt&sortOrder=desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "requests"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "createdAt"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc"
+                }
+              ]
+            },
+            "description": "Scoped to the caller's own company."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test('exactly the three requests just created', () => pm.expect(pm.response.json().meta.total).to.eql(3));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List all requests (ADMIN)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/requests?page=1&limit=10&sortBy=createdAt&sortOrder=desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "requests"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "createdAt"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search + filter requests",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/requests?searchTerm=hydraulic&status=PENDING&priority=HIGH&page=1&limit=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "requests"],
+              "query": [
+                {
+                  "key": "searchTerm",
+                  "value": "hydraulic"
+                },
+                {
+                  "key": "status",
+                  "value": "PENDING"
+                },
+                {
+                  "key": "priority",
+                  "value": "HIGH"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "searchTerm matches code, title and description. Filters: status, priority, categoryId, siteId."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get one request",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/requests/{{requestId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "requests", "{{requestId}}"]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update a request (PENDING only)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/requests/{{requestId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "requests", "{{requestId}}"]
+            },
+            "description": "Allowed only while the request is still PENDING, i.e. before a dispatcher has acted on it.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"priority\": \"CRITICAL\",\n  \"title\": \"Hydraulic press losing pressure - escalated\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancel a request",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/requests/{{requestIdSpare}}/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "requests", "{{requestIdSpare}}", "cancel"]
+            },
+            "description": "Customer only, PENDING only. Acts on the spare request."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete a request (ADMIN, soft)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/requests/{{requestIdSpare}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "requests", "{{requestIdSpare}}"]
+            },
+            "description": "Soft delete. Refused for CONVERTED requests, which already have a work order behind them."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Full CRUD plus pagination, search, filtering and sorting. Creates three requests: one for the work-order flow, one for the double-booking demo, one for cancel/delete."
+    },
+    {
+      "name": "07 Assignment",
+      "item": [
+        {
+          "name": "400 - assign a technician without the required skill",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/requests/{{requestId}}/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "requests", "{{requestId}}", "approve"]
+            },
+            "description": "The service category names the skill the job needs; the assignment transaction checks the technician actually holds it. Without this, a dispatcher could send an HVAC engineer to a hydraulics fault and nothing would object.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"technicianId\": \"{{technicianIdWrongSkill}}\",\n  \"scheduledStart\": \"{{slotStart}}\",\n  \"scheduledEnd\": \"{{slotEnd}}\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// A fresh future window on every run, so replays never collide.",
+                  "const d = new Date();",
+                  "d.setUTCDate(d.getUTCDate() + 30);",
+                  "d.setUTCHours(9, 0, 0, 0);",
+                  "const end = new Date(d.getTime() + 3 * 60 * 60 * 1000);",
+                  "pm.collectionVariables.set('slotStart', d.toISOString());",
+                  "pm.collectionVariables.set('slotEnd', end.toISOString());",
+                  "// A window that deliberately overlaps the one above.",
+                  "const oStart = new Date(d.getTime() + 60 * 60 * 1000);",
+                  "const oEnd = new Date(d.getTime() + 4 * 60 * 60 * 1000);",
+                  "pm.collectionVariables.set('slotOverlapStart', oStart.toISOString());",
+                  "pm.collectionVariables.set('slotOverlapEnd', oEnd.toISOString());",
+                  "// A clear window for the reschedule demo.",
+                  "const rStart = new Date(d.getTime() + 48 * 60 * 60 * 1000);",
+                  "const rEnd = new Date(rStart.getTime() + 3 * 60 * 60 * 1000);",
+                  "pm.collectionVariables.set('slotRescheduleStart', rStart.toISOString());",
+                  "pm.collectionVariables.set('slotRescheduleEnd', rEnd.toISOString());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"message mentions \\\"skill\\\"\", () => {",
+                  "  pm.expect(pm.response.json().message.toLowerCase()).to.include(\"skill\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Approve the request -> create the work order",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/requests/{{requestId}}/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "requests", "{{requestId}}", "approve"]
+            },
+            "description": "One Serializable transaction: verify the technician holds the required skill, check the daily job cap, create the WorkOrder with a WO- code, flip the request to CONVERTED, and write both a history row and an audit row. Either all of that happens or none of it does.\n\nTime-overlap is deliberately NOT checked in application code - see the 409 below.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"technicianId\": \"{{technicianId}}\",\n  \"scheduledStart\": \"{{slotStart}}\",\n  \"scheduledEnd\": \"{{slotEnd}}\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const d = pm.response.json().data;",
+                  "if (d && d.id) pm.collectionVariables.set(\"workOrderId\", d.id);",
+                  "const d = pm.response.json().data;",
+                  "pm.test('sequential WO- code issued', () => pm.expect(d.code).to.match(/^WO-\\d{4}-\\d{6}$/));",
+                  "pm.test('starts in ASSIGNED', () => pm.expect(d.status).to.eql('ASSIGNED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 - double-booking the same technician",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/requests/{{requestIdConflict}}/approve",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "requests",
+                "{{requestIdConflict}}",
+                "approve"
+              ]
+            },
+            "description": "THE HEADLINE CASE.\n\nThe same technician, a time window overlapping the job just created. An application-level \"is the slot free?\" check has an unavoidable race: two dispatchers can both read free and both insert. Here a Postgres exclusion constraint makes the check and the write one atomic operation, so the race cannot happen at all:\n\n  EXCLUDE USING gist (technicianId WITH =, tstzrange(scheduledStart, scheduledEnd) WITH &&)\n\nThe violation raises SQLSTATE 23P01, which the global error handler maps to a clean 409.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"technicianId\": \"{{technicianId}}\",\n  \"scheduledStart\": \"{{slotOverlapStart}}\",\n  \"scheduledEnd\": \"{{slotOverlapEnd}}\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"message mentions \\\"already has a job\\\"\", () => {",
+                  "  pm.expect(pm.response.json().message.toLowerCase()).to.include(\"already has a job\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject a request (ADMIN)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/requests/{{requestIdConflict}}/reject",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "requests",
+                "{{requestIdConflict}}",
+                "reject"
+              ]
+            },
+            "description": "A rejection reason is required and is stored on the request for the customer to read.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rejectReason\": \"No second technician available in this window; customer asked to defer.\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Skill matching, the assignment transaction, and the database-enforced double-booking conflict."
+    },
+    {
+      "name": "08 Work order lifecycle",
+      "item": [
+        {
+          "name": "List work orders (ADMIN - all)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/work-orders?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "work-orders"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Role-scoped three ways: admin sees all, a technician sees their own jobs, a customer sees their company's."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List work orders (TECHNICIAN - own only)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technicianToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/work-orders?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "work-orders"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "My assigned jobs (TECHNICIAN)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technicianToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/work-orders/my-assigned",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "work-orders", "my-assigned"]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get one work order (with full history)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technicianToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "work-orders", "{{workOrderId}}"]
+            },
+            "description": "Includes the complete status history - every transition, who made it and when."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "400 - illegal transition (ASSIGNED -> COMPLETED)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technicianToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "work-orders", "{{workOrderId}}", "status"]
+            },
+            "description": "Transitions are checked against a single allowed-transitions map rather than accepting whatever status the client sends. A job cannot skip from ASSIGNED straight to COMPLETED.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"COMPLETED\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"message mentions \\\"cannot move\\\"\", () => {",
+                  "  pm.expect(pm.response.json().message.toLowerCase()).to.include(\"cannot move\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "403 - technician attempts an admin-only transition",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technicianToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "work-orders", "{{workOrderId}}", "status"]
+            },
+            "description": "Legal transition, wrong actor. Scheduling is the dispatcher's job.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"SCHEDULED\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Status -> SCHEDULED (ADMIN)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "work-orders", "{{workOrderId}}", "status"]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"SCHEDULED\",\n  \"note\": \"Confirmed the visit window with the site contact.\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "403 - a different technician touches this job",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technicianToken2}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "work-orders", "{{workOrderId}}", "status"]
+            },
+            "description": "OWNERSHIP CHECK, NOT JUST A ROLE CHECK.\n\nThe caller IS a technician, so the role guard passes. The service then compares the job's technician against the caller and refuses. Without this, every technician could drive every other technician's jobs.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"EN_ROUTE\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"message mentions \\\"not assigned to you\\\"\", () => {",
+                  "  pm.expect(pm.response.json().message.toLowerCase()).to.include(\"not assigned to you\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reschedule the visit (ADMIN)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/reschedule",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "work-orders",
+                "{{workOrderId}}",
+                "reschedule"
+              ]
+            },
+            "description": "Re-triggers the exclusion constraint - moving a job onto an occupied window also returns 409.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scheduledStart\": \"{{slotRescheduleStart}}\",\n  \"scheduledEnd\": \"{{slotRescheduleEnd}}\",\n  \"note\": \"Customer requested a later slot.\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Status -> EN_ROUTE (TECHNICIAN)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technicianToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "work-orders", "{{workOrderId}}", "status"]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"EN_ROUTE\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Status -> IN_PROGRESS (TECHNICIAN)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technicianToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "work-orders", "{{workOrderId}}", "status"]
+            },
+            "description": "Stamps actualStart. The invoice bills from the ACTUAL times worked, not the scheduled window.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"IN_PROGRESS\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test('actualStart stamped', () => pm.expect(pm.response.json().data.actualStart).to.not.be.null);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Log parts used (TECHNICIAN)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technicianToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/parts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "work-orders", "{{workOrderId}}", "parts"]
+            },
+            "description": "unitPrice is stored on the row rather than looked up from a price list later. An invoice must keep the price as it was on the day of the job, otherwise last year's invoice silently changes when someone edits a catalogue price.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Hydraulic pump seal kit\",\n  \"quantity\": 2,\n  \"unitPrice\": 68.75\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Status -> COMPLETED (TECHNICIAN)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technicianToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "work-orders", "{{workOrderId}}", "status"]
+            },
+            "description": "Stamps actualEnd, which closes the billable window.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"COMPLETED\",\n  \"diagnosis\": \"Worn main pump shaft seal and a sticking relief valve.\",\n  \"workSummary\": \"Replaced the seal kit, cleaned and reset the relief valve. Pressure held at 180 bar over a 30-minute test.\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test('actualEnd stamped', () => pm.expect(pm.response.json().data.actualEnd).to.not.be.null);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "400 - parts after completion",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technicianToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/parts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "work-orders", "{{workOrderId}}", "parts"]
+            },
+            "description": "Parts can only be logged while the job is EN_ROUTE or IN_PROGRESS. Once complete, the totals are frozen.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Late part\",\n  \"quantity\": 1,\n  \"unitPrice\": 10\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "The guarded state machine end to end, including the illegal-transition, wrong-role and wrong-technician rejections."
+    },
+    {
+      "name": "09 Invoicing",
+      "item": [
+        {
+          "name": "Generate the invoice (ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/invoice",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "work-orders", "{{workOrderId}}", "invoice"]
+            },
+            "description": "One transaction: labour hours from actualEnd - actualStart (floored at 0.5h), labour = hours x the technician's hourly rate, parts = sum(unitPrice x quantity), 15% VAT, then an INV- number from a sequence, and the work order moves to INVOICED.\n\nAll five money components are stored, not just the total, so the invoice keeps its own arithmetic even after the technician's rate changes."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const d = pm.response.json().data;",
+                  "if (d && d.id) pm.collectionVariables.set(\"invoiceId\", d.id);",
+                  "const d = pm.response.json().data;",
+                  "const n = v => Number(v);",
+                  "pm.test('components sum to the stored total', () => {",
+                  "  const sum = n(d.labourAmount) + n(d.partsAmount) + n(d.vatAmount);",
+                  "  pm.expect(Math.abs(sum - n(d.totalAmount))).to.be.below(0.011);",
+                  "});",
+                  "pm.test('issued as DUE', () => pm.expect(d.status).to.eql('DUE'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 - invoicing the same work order twice",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/invoice",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "work-orders", "{{workOrderId}}", "invoice"]
+            },
+            "description": "One invoice per work order, enforced by a unique constraint as well as this check."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 409\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List invoices (ADMIN)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/invoices?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "invoices"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Role-scoped. Filters: status, from, to, searchTerm."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List invoices (CUSTOMER - own only)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/invoices?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "invoices"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get one invoice",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/invoices/{{invoiceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "invoices", "{{invoiceId}}"]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "403 - another customer reads this invoice",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken2}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/invoices/{{invoiceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "invoices", "{{invoiceId}}"]
+            },
+            "description": "Ownership check. Both callers are customers; only one owns the invoice."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"message mentions \\\"not your invoice\\\"\", () => {",
+                  "  pm.expect(pm.response.json().message.toLowerCase()).to.include(\"not your invoice\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Invoice generation from the hours actually worked, with the money components asserted to sum to the stored total."
+    },
+    {
+      "name": "10 Payment",
+      "item": [
+        {
+          "name": "Initiate a Stripe payment (CUSTOMER)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/payments/initiate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "payments", "initiate"]
+            },
+            "description": "Writes a Payment row in INITIATED state carrying our own transactionId, then creates a Stripe Checkout session with that id in its metadata. Each attempt is its own row, so an abandoned checkout leaves a trail and the customer can retry - which is why an Invoice has many Payments.\n\nTO COMPLETE THE PAYMENT: open the checkoutUrl from the response, pay with test card 4242 4242 4242 4242, any future expiry, any CVC. Stripe then calls the webhook.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invoiceId\": \"{{invoiceId}}\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const d = pm.response.json().data;",
+                  "if (d && d.transactionId) pm.collectionVariables.set('transactionId', d.transactionId);",
+                  "if (d && d.checkoutUrl) pm.collectionVariables.set('checkoutUrl', d.checkoutUrl);",
+                  "pm.test('a live Stripe checkout url was returned', () => pm.expect(d.checkoutUrl).to.include('checkout.stripe.com'));",
+                  "console.log('PAY HERE ->', d.checkoutUrl);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Payment status (before paying: INITIATED)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/payments/{{transactionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "payments", "{{transactionId}}"]
+            },
+            "description": "Run this before completing checkout. The payment is INITIATED and the invoice is still DUE - nothing is marked paid until the verified webhook arrives."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Payment status (after paying: SUCCESS)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/payments/{{transactionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "payments", "{{transactionId}}"]
+            },
+            "description": "Run this AFTER completing checkout in the browser.\n\nExpect payment SUCCESS, invoice PAID with paidAt set, and the work order PAID. The gatewayRef has been replaced with the Stripe payment intent, and the raw event body is stored in gatewayPayload for reconciliation."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "if (d.status === 'SUCCESS') {",
+                  "  pm.test('payment settled by the verified webhook', () => pm.expect(d.status).to.eql('SUCCESS'));",
+                  "  pm.test('invoice marked paid', () => pm.expect(d.invoice.status).to.eql('PAID'));",
+                  "  pm.test('work order marked paid', () => pm.expect(d.invoice.workOrder.status).to.eql('PAID'));",
+                  "} else {",
+                  "  pm.test('PENDING MANUAL STEP - open the checkoutUrl and pay to settle this', () => {",
+                  "    pm.expect(d.status).to.eql('INITIATED');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stripe webhook (reference only - do not send)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "stripe-signature",
+                "value": "t=...,v1=..."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/payments/webhook",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "payments", "webhook"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "<raw Stripe event body - Stripe sends this, not you>"
+            },
+            "description": "THE ONLY PATH THAT MARKS AN INVOICE PAID.\n\nNothing else in the codebase writes InvoiceStatus.PAID or WorkOrderStatus.PAID, and PAID has an empty role list in the transition map, so even an admin cannot set it through the status endpoint. Payment is confirmed by Stripe, never by a client redirect.\n\nSignature verification uses the RAW request body, which is why this one route is mounted with express.raw() ahead of express.json().\n\nIdempotent: Stripe retries webhooks. The handler looks the payment up by our transactionId and returns early if it is already SUCCESS, and re-verifies the charged amount against the invoice total before settling, so a tampered session cannot clear a large invoice with a small charge.\n\nSending this request by hand always returns 400 - a hand-made body cannot carry a valid Stripe signature. That is the endpoint working correctly."
+          },
+          "response": []
+        }
+      ],
+      "description": "Stripe Checkout and the signature-verified, idempotent webhook that is the only path to a PAID invoice."
+    },
+    {
+      "name": "11 Feedback",
+      "item": [
+        {
+          "name": "Submit feedback (CUSTOMER)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/feedback",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "work-orders",
+                "{{workOrderId}}",
+                "feedback"
+              ]
+            },
+            "description": "Closes the service flow. One transaction inserts the rating AND recomputes the technician's ratingAvg / ratingCount, so the stored average can never drift from the rows behind it.\n\nRequires the work order to be PAID, so run this after completing checkout.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 5,\n  \"comment\": \"Technician found the relief valve fault quickly and the press has held pressure since.\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 - rating the same job twice",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/feedback",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "work-orders",
+                "{{workOrderId}}",
+                "feedback"
+              ]
+            },
+            "description": "One rating per work order, enforced by a unique constraint as well as this check.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 3\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 409\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "403 - another customer rates this job",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken2}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/feedback",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "work-orders",
+                "{{workOrderId}}",
+                "feedback"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 1\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get the feedback for a work order",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/feedback",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "work-orders",
+                "{{workOrderId}}",
+                "feedback"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List feedback (TECHNICIAN - ratings received)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technicianToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/feedbacks?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "feedbacks"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "A customer sees ratings they left, a technician sees ratings they received, an admin sees all."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Technician rating was recomputed",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/technicians?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "technicians"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "ratingAvg and ratingCount on the assigned technician have moved after the feedback above."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "REQUIRES THE BROWSER PAYMENT STEP IN FOLDER 10. Feedback is only accepted once the work order is PAID, so these requests fail with 400 until the Stripe checkout has been completed. Run the folder manually after paying."
+    },
+    {
+      "name": "12 Admin",
+      "item": [
+        {
+          "name": "List users (ADMIN)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/users?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "users"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Filters: role, status, searchTerm across name / email / phone. Passwords are stripped at the query with Prisma's omit, so they cannot leak from this endpoint even by accident."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"password never leaks\", () => {",
+                  "  pm.expect(pm.response.text()).to.not.include(\"\\\"password\\\"\");",
+                  "});",
+                  "const d = pm.response.json().data;",
+                  "const t = d.find(u => u.role === 'TECHNICIAN');",
+                  "if (t) pm.collectionVariables.set('targetUserId', t.id);",
+                  "const me = d.find(u => u.role === 'ADMIN');",
+                  "if (me) pm.collectionVariables.set('adminUserId', me.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Filter users by role and status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/users?role=TECHNICIAN&status=ACTIVE&page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "users"],
+              "query": [
+                {
+                  "key": "role",
+                  "value": "TECHNICIAN"
+                },
+                {
+                  "key": "status",
+                  "value": "ACTIVE"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get one user",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/users/{{targetUserId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "users", "{{targetUserId}}"]
+            },
+            "description": "Includes the customer or technician profile, their sites or skills."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Suspend a user (ADMIN)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/users/{{targetUserId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "users",
+                "{{targetUserId}}",
+                "status"
+              ]
+            },
+            "description": "Takes effect on the account's very NEXT request, not when its access token expires: checkAuth re-reads the user from the database on every call, and the same transaction revokes every refresh token so the session cannot be renewed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"SUSPENDED\",\n  \"reason\": \"Certification renewal pending.\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "403 - suspended user's existing token is dead",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technicianToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/work-orders/my-assigned",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "work-orders", "my-assigned"]
+            },
+            "description": "The token below was issued BEFORE the suspension and has not expired. It is rejected anyway - that is the database re-read doing its job."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"message mentions \\\"suspended\\\"\", () => {",
+                  "  pm.expect(pm.response.json().message.toLowerCase()).to.include(\"suspended\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reactivate the user (ADMIN)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/users/{{targetUserId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "users",
+                "{{targetUserId}}",
+                "status"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ACTIVE\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "400 - admin changes their own status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/users/{{adminUserId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "users",
+                "{{adminUserId}}",
+                "status"
+              ]
+            },
+            "description": "Refused. An admin locking themselves out would need database access to recover.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"SUSPENDED\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "400 - role change that would orphan a profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/users/{{targetUserId}}/role",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "users",
+                "{{targetUserId}}",
+                "role"
+              ]
+            },
+            "description": "A technician has no customer profile, so making them a CUSTOMER is refused rather than silently breaking their data.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"CUSTOMER\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "403 - a customer opens the admin area",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "users"]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Account administration: list, inspect, suspend, reactivate and change roles - including proof that a suspension kills an already-issued token."
+    },
+    {
+      "name": "13 Validation & auth errors",
+      "item": [
+        {
+          "name": "401 - no token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/work-orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "work-orders"]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "401 - malformed token",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{badToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/work-orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "work-orders"]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"badToken\", \"not.a.real.token\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "400 - validation errors, field by field",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "register"]
+            },
+            "description": "Zod failures are returned as a field-by-field errors array, which is what a client needs to highlight the offending inputs.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"A\",\n  \"email\": \"not-an-email\",\n  \"password\": \"abc\",\n  \"companyName\": \"X\",\n  \"billingAddr\": \"Y\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 400\", () => pm.response.to.have.status(400));",
+                  "const b = pm.response.json();",
+                  "pm.test('errors array is populated', () => pm.expect(b.errors).to.be.an('array').that.is.not.empty);",
+                  "pm.test('each error names its field', () => pm.expect(b.errors[0]).to.have.property('path'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "401 - wrong password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "The same message is returned for an unknown email and a wrong password, so the endpoint cannot be used to discover which email addresses have accounts.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@gmail.com\",\n  \"password\": \"WrongPassword@123\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "401 - unknown email (identical message)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nobody.here@example.com\",\n  \"password\": \"WrongPassword@123\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "404 - unknown route",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/does-not-exist",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "does-not-exist"]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "404 - valid uuid, no such record",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/work-orders/00000000-0000-4000-8000-000000000000",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "work-orders",
+                "00000000-0000-4000-8000-000000000000"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "401 / 400 / 404 cases and the field-by-field validation error shape."
+    },
+    {
+      "name": "14 Session teardown",
+      "item": [
+        {
+          "name": "Change password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/change-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "change-password"]
+            },
+            "description": "Requires the old password, and revokes every refresh token for that user - a password change is usually prompted by a suspected compromise, so leaving other sessions alive would defeat it.\n\nActs on the throwaway account registered at the start of this run, so nothing shared is affected.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"oldPassword\": \"Meghna@1234\",\n  \"newPassword\": \"Meghna@12345\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "logout"]
+            },
+            "description": "Stamps revokedAt on the refresh token and clears both cookies.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Run last. These change the throwaway account's password and end its session."
+    }
+  ]
+}
