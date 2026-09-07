@@ -10,6 +10,7 @@ import {
 import config from "../../config";
 import { prisma } from "../../lib/prisma";
 import { getStripe, getStripeWebhookSecret } from "../../lib/stripe";
+import { SERIALIZABLE_TX } from "../../lib/transaction";
 import type { RequestUser } from "../../middleware/checkAuth";
 import { AppError } from "../../utils/AppError";
 import { writeAuditLog } from "../../utils/auditLogger";
@@ -251,7 +252,7 @@ const settlePayment = async (session: Stripe.Checkout.Session) => {
 
 			return { handled: true, alreadyProcessed: false };
 		},
-		{ isolationLevel: "Serializable" },
+		SERIALIZABLE_TX,
 	);
 };
 

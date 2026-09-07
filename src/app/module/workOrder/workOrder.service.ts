@@ -7,6 +7,7 @@ import {
 import type { WorkOrderWhereInput } from "../../../generated/prisma/models";
 import type { IQuery } from "../../interfaces";
 import { prisma } from "../../lib/prisma";
+import { SERIALIZABLE_TX } from "../../lib/transaction";
 import type { RequestUser } from "../../middleware/checkAuth";
 import { AppError } from "../../utils/AppError";
 import { writeAuditLog } from "../../utils/auditLogger";
@@ -180,7 +181,7 @@ const approveServiceRequest = async (
 
 			return workOrder;
 		},
-		{ isolationLevel: "Serializable" },
+		SERIALIZABLE_TX,
 	);
 };
 
